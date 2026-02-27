@@ -72,3 +72,6 @@ Developer Notes
     Port: The server defaults to port 7007. Ensure this port is not being used by another application.
 
     Git: Always run git pull before starting work to sync the latest algorithms and frontend changes from the team.
+
+Termination of Program:
+  To terminate the program, press ctrl+c in the terminal where the program was launched from  
