@@ -1,14 +1,246 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Maze Feasibility Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAZE MASTER</title>
+    <meta name="description" content="Maze Master: Generate, solve, and manually navigate procedural mazes. Compete on the leaderboard.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <h1>Maze Solver Prototype</h1>
-    <canvas id="mazeCanvas" width="600" height="600" style="border:5px solid #2c3e50; background:#fff;"></canvas>
-    <br>
-    <button onclick="saveScore()">Save Highscore to DB</button>
+    <div class="grid-overlay"></div>
+    
+    <header class="header">
+        <div class="header-content">
+            <h1 class="title">MAZE MASTER</h1>
+            <div class="subtitle">GRID-TO-VECTOR LABYRINTH SYSTEM</div>
+        </div>
+        <div class="status-bar">
+            <span class="status-item" id="status">STANDBY</span>
+            <span class="status-item" id="timer">00:00.000</span>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <aside class="control-panel">
+
+            <!-- ── Mode Toggle ── -->
+            <div class="mode-tabs">
+                <button id="tabAlgorithm" class="mode-tab active" onclick="">ALGORITHM</button>
+                <button id="tabManual" class="mode-tab" onclick="">MANUAL PLAY</button>
+            </div>
+
+            <!-- ══════════════════════════════════════ ALGORITHM PANEL ══ -->
+            <div id="algorithmPanel" class="mode-panel">
+
+                <section class="panel-section">
+                    <h2 class="panel-title">GENERATION PARAMETERS</h2>
+                    <div class="control-group">
+                        <label for="rows">ROWS</label>
+                        <input type="number" id="rows" value="20" min="5" max="50">
+                    </div>
+                    <div class="control-group">
+                        <label for="cols">COLUMNS</label>
+                        <input type="number" id="cols" value="20" min="5" max="50">
+                    </div>
+                    <button id="generateBtn" class="btn btn-primary">GENERATE</button>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">SOLVER CONFIGURATION</h2>
+                    <div class="control-group">
+                        <label for="algorithm">ALGORITHM</label>
+                        <select id="algorithm">
+                            <option value="astar">A* PATHFINDING</option>
+                            <option value="dijkstra">DIJKSTRA'S</option>
+                        </select>
+                    </div>
+                    <button id="solveBtn" class="btn btn-secondary" disabled>SOLVE</button>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">RENDER SETTINGS</h2>
+                    <div class="control-group checkbox-group">
+                        <input type="checkbox" id="showSolution" checked>
+                        <label for="showSolution">DISPLAY SOLUTION PATH</label>
+                    </div>
+                    <div class="control-group checkbox-group">
+                        <input type="checkbox" id="animatePath">
+                        <label for="animatePath">ANIMATE PATHFINDING</label>
+                    </div>
+                </section>
+
+                <section class="panel-section stats-section">
+                    <h2 class="panel-title">METRICS</h2>
+                    <div class="stat-row">
+                        <span class="stat-label">MAZE SIZE:</span>
+                        <span class="stat-value" id="mazeSize">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">PATH LENGTH:</span>
+                        <span class="stat-value" id="pathLength">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">SOLVE TIME:</span>
+                        <span class="stat-value" id="solveTime">-</span>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">ALGORITHM SCORES</h2>
+                    <div id="scoresContainer" class="scores-container">
+                        <div class="loading">NO DATA</div>
+                    </div>
+                    <button id="submitScoreBtn" class="btn btn-tertiary" disabled>SUBMIT SCORE</button>
+                </section>
+
+            </div><!-- /algorithmPanel -->
+
+            <!-- ══════════════════════════════════════ MANUAL PANEL ══ -->
+            <div id="manualPanel" class="mode-panel hidden">
+
+                <section class="panel-section">
+                    <h2 class="panel-title">GENERATION PARAMETERS</h2>
+                    <div class="control-group">
+                        <label for="manualRows">ROWS</label>
+                        <input type="number" id="manualRows" value="20" min="5" max="50">
+                    </div>
+                    <div class="control-group">
+                        <label for="manualCols">COLUMNS</label>
+                        <input type="number" id="manualCols" value="20" min="5" max="50">
+                    </div>
+                    <button id="manualGenerateBtn" class="btn btn-primary">GENERATE</button>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">PLAY CONTROLS</h2>
+                    <div class="play-display">
+                        <div class="play-stat-block">
+                            <div class="play-stat-label">TIME</div>
+                            <div class="play-timer" id="playTimer">00:00.000</div>
+                        </div>
+                        <div class="play-stat-block">
+                            <div class="play-stat-label">STEPS</div>
+                            <div class="play-steps" id="playSteps">0</div>
+                        </div>
+                    </div>
+                    <button id="startPlayBtn" class="btn btn-primary" disabled>START</button>
+                    <button id="giveUpBtn" class="btn btn-danger" disabled style="margin-top:0.75rem">GIVE UP</button>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">KEY BINDINGS</h2>
+                    <div class="key-hint">
+                        <div class="key-row">
+                            <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>
+                            <span>Move player</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel-section">
+                    <h2 class="panel-title">MANUAL PLAY RECORDS</h2>
+                    <div id="attemptsContainer" class="scores-container">
+                        <div class="loading">NO DATA</div>
+                    </div>
+                </section>
+
+            </div><!-- /manualPanel -->
+
+        </aside>
+
+        <div class="canvas-container">
+            <canvas id="mazeCanvas"></canvas>
+            <div class="canvas-legend">
+                <div class="legend-item">
+                    <div class="legend-color wall"></div>
+                    <span>WALL STRUCTURE</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color path"></div>
+                    <span>SOLUTION PATH</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color start"></div>
+                    <span>START NODE</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color end"></div>
+                    <span>END NODE</span>
+                </div>
+                <div class="legend-item" id="playerLegendItem" style="display:none">
+                    <div class="legend-color player"></div>
+                    <span>PLAYER</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ── Algorithm Score Modal ── -->
+    <div id="scoreModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">SUBMIT HIGH SCORE</h2>
+            <div class="control-group">
+                <label for="playerName">PLAYER NAME</label>
+                <input type="text" id="playerName" maxlength="20" placeholder="ENTER NAME">
+            </div>
+            <div class="modal-actions">
+                <button id="confirmScore" class="btn btn-primary">SUBMIT</button>
+                <button id="cancelScore" class="btn btn-secondary">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Manual Play Win Modal ── -->
+    <div id="attemptModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title win-title">🏆 MAZE CLEARED!</h2>
+            <div class="win-stats">
+                <div class="win-stat-row">
+                    <span>TIME</span>
+                    <span id="winTime">-</span>
+                </div>
+                <div class="win-stat-row">
+                    <span>STEPS</span>
+                    <span id="winSteps">-</span>
+                </div>
+            </div>
+            <div class="control-group" style="margin-top:1.5rem">
+                <label for="attemptPlayerName">PLAYER NAME</label>
+                <input type="text" id="attemptPlayerName" maxlength="20" placeholder="ENTER NAME">
+            </div>
+            <div class="modal-actions">
+                <button id="confirmAttempt" class="btn btn-primary">SUBMIT</button>
+                <button id="cancelAttempt" class="btn btn-secondary">SKIP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Give Up Options Modal ── -->
+    <div id="giveUpModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title giveup-title">SESSION TERMINATED</h2>
+            <p class="modal-subtitle">What would you like to do?</p>
+            <div class="giveup-actions">
+                <button id="tryAgainBtn" class="btn btn-primary giveup-btn">
+                    <span class="giveup-btn-icon">↺</span>
+                    TRY AGAIN
+                    <span class="giveup-btn-sub">Same maze</span>
+                </button>
+                <button id="tryAlgorithmBtn" class="btn btn-secondary giveup-btn">
+                    <span class="giveup-btn-icon">⚡</span>
+                    TRY ALGORITHM
+                    <span class="giveup-btn-sub">Watch it solved</span>
+                </button>
+                <button id="newMazeBtn" class="btn btn-warning giveup-btn">
+                    <span class="giveup-btn-icon">⊞</span>
+                    NEW MAZE
+                    <span class="giveup-btn-sub">Generate fresh</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>
