@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 public class Main {
-    private static final ObjectMapper mapper   = new ObjectMapper();
-    private static final Database     database = new Database();
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final Database database = new Database();
 
     public static void main(String[] args) {
         var app = Javalin.create(config -> {
@@ -45,23 +45,24 @@ public class Main {
             Map<String, Object> mazeData = (Map<String, Object>) req.get("maze");
             String algoName = (String) req.getOrDefault("algoName", "astar");
 
-            Maze maze  = deserializeMaze(mazeData);
+            Maze maze = deserializeMaze(mazeData);
             Cell start = maze.getCell(0, 0);
-            Cell end   = maze.getCell(maze.getRows() - 1, maze.getCols() - 1);
+            Cell end = maze.getCell(maze.getRows() - 1, maze.getCols() - 1);
 
-            MazeSolver solver    = new MazeSolver();
-            long       startTime = System.currentTimeMillis();
-            List<Cell> solution  = "dijkstra".equalsIgnoreCase(algoName)
+            MazeSolver solver = new MazeSolver();
+            long startTime = System.currentTimeMillis();
+            List<Cell> solution = "dijkstra".equalsIgnoreCase(algoName)
                     ? solver.solveDijkstra(maze, start, end)
                     : solver.solve(maze, start, end);
             long solveTime = System.currentTimeMillis() - startTime;
 
-            for (Cell c : solution) c.setPath(true);
+            for (Cell c : solution)
+                c.setPath(true);
 
             Map<String, Object> response = new HashMap<>();
-            response.put("solution",    serializePath(solution));
-            response.put("solveTime",   solveTime);
-            response.put("pathLength",  solution.size());
+            response.put("solution", serializePath(solution));
+            response.put("solveTime", solveTime);
+            response.put("pathLength", solution.size());
             ctx.json(response);
         });
 
@@ -69,12 +70,12 @@ public class Main {
 
         app.post("/api/scores", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
-            String  playerName = (String)  req.get("playerName");
-            String  mazeSize   = (String)  req.get("mazeSize");
-            String  algoName   = (String)  req.getOrDefault("algoName", "astar");
-            long    solveTime  = ((Number) req.get("solveTime")).longValue();
-            int     pathLength = req.containsKey("pathLength") ? ((Number) req.get("pathLength")).intValue() : 0;
-            Integer mazeId     = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
+            String playerName = (String) req.get("playerName");
+            String mazeSize = (String) req.get("mazeSize");
+            String algoName = (String) req.getOrDefault("algoName", "astar");
+            long solveTime = ((Number) req.get("solveTime")).longValue();
+            int pathLength = req.containsKey("pathLength") ? ((Number) req.get("pathLength")).intValue() : 0;
+            Integer mazeId = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
             int playerId = database.getOrCreatePlayer(playerName);
             database.addAlgoRun(playerId, mazeId, mazeSize, algoName, solveTime, pathLength);
@@ -91,11 +92,11 @@ public class Main {
 
         app.post("/api/attempts", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
-            String  playerName = (String)  req.get("playerName");
-            String  mazeSize   = (String)  req.get("mazeSize");
-            long    duration   = ((Number) req.get("duration")).longValue();
-            int     steps      = ((Number) req.get("steps")).intValue();
-            Integer mazeId     = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
+            String playerName = (String) req.get("playerName");
+            String mazeSize = (String) req.get("mazeSize");
+            long duration = ((Number) req.get("duration")).longValue();
+            int steps = ((Number) req.get("steps")).intValue();
+            Integer mazeId = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
             int playerId = database.getOrCreatePlayer(playerName);
             database.addManual(playerId, mazeId, mazeSize, duration, steps);
@@ -114,12 +115,12 @@ public class Main {
         app.post("/api/mazes/save", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
             String playerName = (String) req.get("playerName");
-            String label      = (String) req.getOrDefault("label", "Untitled Maze");
+            String label = (String) req.getOrDefault("label", "Untitled Maze");
 
             @SuppressWarnings("unchecked")
             Map<String, Object> mazeData = (Map<String, Object>) req.get("mazeData");
-            int    rows     = ((Number) mazeData.get("rows")).intValue();
-            int    cols     = ((Number) mazeData.get("cols")).intValue();
+            int rows = ((Number) mazeData.get("rows")).intValue();
+            int cols = ((Number) mazeData.get("cols")).intValue();
             String gridJson = mapper.writeValueAsString(mazeData);
 
             // 1. Insert MAZE (strong entity, independent of player)
@@ -137,7 +138,7 @@ public class Main {
         });
 
         app.get("/api/mazes/{id}", ctx -> {
-            int    mazeId   = Integer.parseInt(ctx.pathParam("id"));
+            int mazeId = Integer.parseInt(ctx.pathParam("id"));
             String gridJson = database.getMazeById(mazeId);
 
             if (gridJson == null) {
@@ -169,12 +170,12 @@ public class Main {
             for (int c = 0; c < maze.getCols(); c++) {
                 Cell cell = maze.getCell(r, c);
                 Map<String, Object> cd = new HashMap<>();
-                cd.put("row",    cell.getRow());
-                cd.put("col",    cell.getCol());
-                cd.put("top",    cell.hasTopWall());
-                cd.put("right",  cell.hasRightWall());
+                cd.put("row", cell.getRow());
+                cd.put("col", cell.getCol());
+                cd.put("top", cell.hasTopWall());
+                cd.put("right", cell.hasRightWall());
                 cd.put("bottom", cell.hasBottomWall());
-                cd.put("left",   cell.hasLeftWall());
+                cd.put("left", cell.hasLeftWall());
                 cd.put("isPath", cell.isPath());
                 cells.add(cd);
             }

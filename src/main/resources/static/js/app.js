@@ -425,7 +425,7 @@ class MazeMaster {
           <span class="maze-label-col" title="${m.label}">${m.label}</span>
           <span>${m.rows}×${m.cols}</span>
           <span class="maze-player-col">${m.playerName}</span>
-          <button class="btn-load" onclick="window.mazeApp.loadMaze(${m.id})">LOAD</button>
+          <button class="btn-load" onclick="window.mazeApp.loadMaze(${m.mazeId})">LOAD</button>
         </div>
       `).join('');
 
