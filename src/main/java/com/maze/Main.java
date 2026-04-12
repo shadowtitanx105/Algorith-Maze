@@ -15,190 +15,198 @@ import java.util.List;
 import java.util.Map;
 
 public class Main {
-  private static final ObjectMapper mapper = new ObjectMapper();
-  private static final Database database = new Database();
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final Database database = new Database();
 
-  public static void main(String[] args) {
-    var app = Javalin.create(config -> {
-      config.staticFiles.add("/static", Location.CLASSPATH);
-    }).start(7007);
+    public static void main(String[] args) {
+        var app = Javalin.create(config -> {
+            config.staticFiles.add("/static", Location.CLASSPATH);
+        }).start(7007);
 
-    app.get("/", ctx -> ctx.redirect("/index.html"));
+        app.get("/", ctx -> ctx.redirect("/index.html"));
 
-    // ─── Maze Generation ───────────────────────────────────────────────────────
+        // ─── Maze Generation ───────────────────────────────────────────────
 
-    app.post("/api/generate", ctx -> {
-      Map<String, Object> request = mapper.readValue(ctx.body(), Map.class);
-      int rows = (Integer) request.get("rows");
-      int cols = (Integer) request.get("cols");
+        app.post("/api/generate", ctx -> {
+            Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
+            int rows = (Integer) req.get("rows");
+            int cols = (Integer) req.get("cols");
 
-      Maze maze = new Maze(rows, cols);
-      MazeGenerator generator = new MazeGenerator();
-      generator.generate(maze);
+            Maze maze = new Maze(rows, cols);
+            new MazeGenerator().generate(maze);
+            ctx.json(serializeMaze(maze));
+        });
 
-      Map<String, Object> response = serializeMaze(maze);
-      ctx.json(response);
-    });
+        // ─── Algorithm Solver ──────────────────────────────────────────────
 
-    // ─── Algorithm Solver ──────────────────────────────────────────────────────
+        app.post("/api/solve", ctx -> {
+            Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mazeData = (Map<String, Object>) req.get("maze");
+            String algorithm = (String) req.getOrDefault("algorithm", "astar");
 
-    app.post("/api/solve", ctx -> {
-      Map<String, Object> request = mapper.readValue(ctx.body(), Map.class);
-      @SuppressWarnings("unchecked")
-      Map<String, Object> mazeData = (Map<String, Object>) request.get("maze");
-      String algorithm = (String) request.getOrDefault("algorithm", "astar");
+            Maze maze = deserializeMaze(mazeData);
+            MazeSolver solver = new MazeSolver();
+            Cell start = maze.getCell(0, 0);
+            Cell end   = maze.getCell(maze.getRows() - 1, maze.getCols() - 1);
 
-      Maze maze = deserializeMaze(mazeData);
-      MazeSolver solver = new MazeSolver();
+            long startTime = System.currentTimeMillis();
+            List<Cell> solution = "dijkstra".equalsIgnoreCase(algorithm)
+                    ? solver.solveDijkstra(maze, start, end)
+                    : solver.solve(maze, start, end);
+            long solveTime = System.currentTimeMillis() - startTime;
 
-      Cell start = maze.getCell(0, 0);
-      Cell end = maze.getCell(maze.getRows() - 1, maze.getCols() - 1);
+            for (Cell c : solution) c.setPath(true);
 
-      long startTime = System.currentTimeMillis();
-      List<Cell> solution;
+            Map<String, Object> response = new HashMap<>();
+            response.put("solution",    serializePath(solution));
+            response.put("solveTimeMs", solveTime);
+            response.put("pathLength",  solution.size());
+            ctx.json(response);
+        });
 
-      if ("dijkstra".equalsIgnoreCase(algorithm)) {
-        solution = solver.solveDijkstra(maze, start, end);
-      } else {
-        solution = solver.solve(maze, start, end);
-      }
+        // ─── Algorithm Run (Score) ─────────────────────────────────────────
 
-      long solveTime = System.currentTimeMillis() - startTime;
+        app.post("/api/scores", ctx -> {
+            Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
+            String  playerName  = (String)  req.get("playerName");
+            String  mazeSize    = (String)  req.get("mazeSize");
+            String  algorithm   = (String)  req.getOrDefault("algorithm", "astar");
+            long    solveTimeMs = ((Number) req.get("solveTimeMs")).longValue();
+            int     pathLength  = req.containsKey("pathLength") ? ((Number) req.get("pathLength")).intValue() : 0;
+            Integer mazeId      = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
-      for (Cell cell : solution) {
-        cell.setPath(true);
-      }
+            int playerId = database.getOrCreatePlayer(playerName);
+            database.addAlgorithmRun(playerId, mazeId, mazeSize, algorithm, solveTimeMs, pathLength);
 
-      Map<String, Object> response = new HashMap<>();
-      response.put("solution", serializePath(solution));
-      response.put("solveTimeMs", solveTime);
-      response.put("pathLength", solution.size());
+            ctx.json(Map.of("success", true));
+        });
 
-      ctx.json(response);
-    });
+        app.get("/api/scores/top", ctx -> {
+            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
+            ctx.json(database.getTopAlgorithmRuns(limit));
+        });
 
-    // ─── Algorithm High Scores ─────────────────────────────────────────────────
+        // ─── Manual Attempt ────────────────────────────────────────────────
 
-    app.post("/api/scores", ctx -> {
-      Map<String, Object> request = mapper.readValue(ctx.body(), Map.class);
-      String playerName = (String) request.get("playerName");
-      String mazeSize = (String) request.get("mazeSize");
-      Number solveTimeMsNum = (Number) request.get("solveTimeMs");
-      long solveTimeMs = solveTimeMsNum.longValue();
-      String algorithm = (String) request.getOrDefault("algorithm", "astar");
+        app.post("/api/attempts", ctx -> {
+            Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
+            String  playerName = (String)  req.get("playerName");
+            String  mazeSize   = (String)  req.get("mazeSize");
+            long    durationMs = ((Number) req.get("durationMs")).longValue();
+            int     steps      = ((Number) req.get("steps")).intValue();
+            Integer mazeId     = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
-      database.addHighScore(playerName, mazeSize, solveTimeMs, algorithm);
+            int playerId = database.getOrCreatePlayer(playerName);
+            database.addManualAttempt(playerId, mazeId, mazeSize, durationMs, steps);
 
-      Map<String, Object> response = new HashMap<>();
-      response.put("success", true);
-      ctx.json(response);
-    });
+            ctx.json(Map.of("success", true));
+        });
 
-    app.get("/api/scores/top", ctx -> {
-      int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(10);
-      List<Map<String, Object>> scores = database.getTopScores(limit);
-      ctx.json(scores);
-    });
+        app.get("/api/attempts/top", ctx -> {
+            int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
+            ctx.json(database.getTopManualAttempts(limit));
+        });
 
-    app.get("/api/scores/size/{size}", ctx -> {
-      String size = ctx.pathParam("size");
-      int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(10);
-      List<Map<String, Object>> scores = database.getScoresBySize(size, limit);
-      ctx.json(scores);
-    });
+        // ─── Saved Mazes ───────────────────────────────────────────────────
+        // NOTE: /api/mazes/saved MUST be registered before /api/mazes/{id}
+        // so Javalin does not treat the literal "saved" as an id parameter.
 
-    // ─── Player Attempts ───────────────────────────────────────────────────────
+        app.post("/api/mazes/save", ctx -> {
+            Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
+            String playerName = (String) req.get("playerName");
+            String label      = (String) req.getOrDefault("label", "Untitled Maze");
 
-    app.post("/api/attempts", ctx -> {
-      Map<String, Object> request = mapper.readValue(ctx.body(), Map.class);
-      String playerName = (String) request.get("playerName");
-      String mazeSize   = (String) request.get("mazeSize");
-      Number durationNum = (Number) request.get("durationMs");
-      Number stepsNum    = (Number) request.get("steps");
-      long durationMs = durationNum.longValue();
-      int  steps      = stepsNum.intValue();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mazeData = (Map<String, Object>) req.get("mazeData");
+            int    rows     = ((Number) mazeData.get("rows")).intValue();
+            int    cols     = ((Number) mazeData.get("cols")).intValue();
+            String gridJson = mapper.writeValueAsString(mazeData);
 
-      database.addAttempt(playerName, mazeSize, durationMs, steps, true);
+            int playerId = database.getOrCreatePlayer(playerName);
+            int mazeId   = database.saveMaze(playerId, rows, cols, gridJson, label);
 
-      Map<String, Object> response = new HashMap<>();
-      response.put("success", true);
-      ctx.json(response);
-    });
+            ctx.json(Map.of("success", true, "mazeId", mazeId));
+        });
 
-    app.get("/api/attempts/top", ctx -> {
-      int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
-      List<Map<String, Object>> attempts = database.getTopAttempts(limit);
-      ctx.json(attempts);
-    });
+        app.get("/api/mazes/saved", ctx -> {
+            ctx.json(database.getSavedMazes());
+        });
 
-    // ─── Shutdown ──────────────────────────────────────────────────────────────
+        app.get("/api/mazes/{id}", ctx -> {
+            int    id       = Integer.parseInt(ctx.pathParam("id"));
+            String gridJson = database.getMazeById(id);
 
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      database.close();
-      System.out.println("Database connection closed");
-    }));
+            if (gridJson == null) {
+                ctx.status(404).json(Map.of("error", "Maze not found"));
+                return;
+            }
+            ctx.json(mapper.readValue(gridJson, Map.class));
+        });
 
-    System.out.println("🧩 Maze Master server running on http://localhost:7007");
-  }
+        // ─── Shutdown ──────────────────────────────────────────────────────
 
-  private static Map<String, Object> serializeMaze(Maze maze) {
-    Map<String, Object> data = new HashMap<>();
-    data.put("rows", maze.getRows());
-    data.put("cols", maze.getCols());
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            database.close();
+            System.out.println("Database connection closed.");
+        }));
 
-    List<Map<String, Object>> cells = new ArrayList<>();
-    for (int r = 0; r < maze.getRows(); r++) {
-      for (int c = 0; c < maze.getCols(); c++) {
-        Cell cell = maze.getCell(r, c);
-        Map<String, Object> cellData = new HashMap<>();
-        cellData.put("row", cell.getRow());
-        cellData.put("col", cell.getCol());
-        cellData.put("top", cell.hasTopWall());
-        cellData.put("right", cell.hasRightWall());
-        cellData.put("bottom", cell.hasBottomWall());
-        cellData.put("left", cell.hasLeftWall());
-        cellData.put("isPath", cell.isPath());
-        cells.add(cellData);
-      }
-    }
-    data.put("cells", cells);
-    return data;
-  }
-
-  private static Maze deserializeMaze(Map<String, Object> data) {
-    Number rowsNum = (Number) data.get("rows");
-    Number colsNum = (Number) data.get("cols");
-    int rows = rowsNum.intValue();
-    int cols = colsNum.intValue();
-
-    Maze maze = new Maze(rows, cols);
-    @SuppressWarnings("unchecked")
-    List<Map<String, Object>> cells = (List<Map<String, Object>>) data.get("cells");
-
-    for (Map<String, Object> cellData : cells) {
-      Number rNum = (Number) cellData.get("row");
-      Number cNum = (Number) cellData.get("col");
-      int r = rNum.intValue();
-      int c = cNum.intValue();
-      Cell cell = maze.getCell(r, c);
-
-      cell.setTopWall((Boolean) cellData.get("top"));
-      cell.setRightWall((Boolean) cellData.get("right"));
-      cell.setBottomWall((Boolean) cellData.get("bottom"));
-      cell.setLeftWall((Boolean) cellData.get("left"));
+        System.out.println("🧩 Maze Master running on http://localhost:7007");
     }
 
-    return maze;
-  }
+    // ─── Serialisation helpers ─────────────────────────────────────────────
 
-  private static List<Map<String, Integer>> serializePath(List<Cell> path) {
-    List<Map<String, Integer>> serialized = new ArrayList<>();
-    for (Cell cell : path) {
-      Map<String, Integer> coord = new HashMap<>();
-      coord.put("row", cell.getRow());
-      coord.put("col", cell.getCol());
-      serialized.add(coord);
+    private static Map<String, Object> serializeMaze(Maze maze) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("rows", maze.getRows());
+        data.put("cols", maze.getCols());
+
+        List<Map<String, Object>> cells = new ArrayList<>();
+        for (int r = 0; r < maze.getRows(); r++) {
+            for (int c = 0; c < maze.getCols(); c++) {
+                Cell cell = maze.getCell(r, c);
+                Map<String, Object> cd = new HashMap<>();
+                cd.put("row",    cell.getRow());
+                cd.put("col",    cell.getCol());
+                cd.put("top",    cell.hasTopWall());
+                cd.put("right",  cell.hasRightWall());
+                cd.put("bottom", cell.hasBottomWall());
+                cd.put("left",   cell.hasLeftWall());
+                cd.put("isPath", cell.isPath());
+                cells.add(cd);
+            }
+        }
+        data.put("cells", cells);
+        return data;
     }
-    return serialized;
-  }
+
+    private static Maze deserializeMaze(Map<String, Object> data) {
+        int rows = ((Number) data.get("rows")).intValue();
+        int cols = ((Number) data.get("cols")).intValue();
+        Maze maze = new Maze(rows, cols);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> cells = (List<Map<String, Object>>) data.get("cells");
+        for (Map<String, Object> cd : cells) {
+            int r = ((Number) cd.get("row")).intValue();
+            int c = ((Number) cd.get("col")).intValue();
+            Cell cell = maze.getCell(r, c);
+            cell.setTopWall((Boolean) cd.get("top"));
+            cell.setRightWall((Boolean) cd.get("right"));
+            cell.setBottomWall((Boolean) cd.get("bottom"));
+            cell.setLeftWall((Boolean) cd.get("left"));
+        }
+        return maze;
+    }
+
+    private static List<Map<String, Integer>> serializePath(List<Cell> path) {
+        List<Map<String, Integer>> out = new ArrayList<>();
+        for (Cell cell : path) {
+            Map<String, Integer> coord = new HashMap<>();
+            coord.put("row", cell.getRow());
+            coord.put("col", cell.getCol());
+            out.add(coord);
+        }
+        return out;
+    }
 }
