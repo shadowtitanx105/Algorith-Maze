@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 public class Main {
-    private static final ObjectMapper mapper = new ObjectMapper();
-    private static final Database database = new Database();
+    private static final ObjectMapper mapper   = new ObjectMapper();
+    private static final Database     database = new Database();
 
     public static void main(String[] args) {
         var app = Javalin.create(config -> {
@@ -43,15 +43,15 @@ public class Main {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
             @SuppressWarnings("unchecked")
             Map<String, Object> mazeData = (Map<String, Object>) req.get("maze");
-            String algorithm = (String) req.getOrDefault("algorithm", "astar");
+            String algoName = (String) req.getOrDefault("algoName", "astar");
 
-            Maze maze = deserializeMaze(mazeData);
-            MazeSolver solver = new MazeSolver();
+            Maze maze  = deserializeMaze(mazeData);
             Cell start = maze.getCell(0, 0);
             Cell end   = maze.getCell(maze.getRows() - 1, maze.getCols() - 1);
 
-            long startTime = System.currentTimeMillis();
-            List<Cell> solution = "dijkstra".equalsIgnoreCase(algorithm)
+            MazeSolver solver    = new MazeSolver();
+            long       startTime = System.currentTimeMillis();
+            List<Cell> solution  = "dijkstra".equalsIgnoreCase(algoName)
                     ? solver.solveDijkstra(maze, start, end)
                     : solver.solve(maze, start, end);
             long solveTime = System.currentTimeMillis() - startTime;
@@ -60,57 +60,56 @@ public class Main {
 
             Map<String, Object> response = new HashMap<>();
             response.put("solution",    serializePath(solution));
-            response.put("solveTimeMs", solveTime);
+            response.put("solveTime",   solveTime);
             response.put("pathLength",  solution.size());
             ctx.json(response);
         });
 
-        // ─── Algorithm Run (Score) ─────────────────────────────────────────
+        // ─── ALGO_RUN — submit & leaderboard ──────────────────────────────
 
         app.post("/api/scores", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
-            String  playerName  = (String)  req.get("playerName");
-            String  mazeSize    = (String)  req.get("mazeSize");
-            String  algorithm   = (String)  req.getOrDefault("algorithm", "astar");
-            long    solveTimeMs = ((Number) req.get("solveTimeMs")).longValue();
-            int     pathLength  = req.containsKey("pathLength") ? ((Number) req.get("pathLength")).intValue() : 0;
-            Integer mazeId      = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
+            String  playerName = (String)  req.get("playerName");
+            String  mazeSize   = (String)  req.get("mazeSize");
+            String  algoName   = (String)  req.getOrDefault("algoName", "astar");
+            long    solveTime  = ((Number) req.get("solveTime")).longValue();
+            int     pathLength = req.containsKey("pathLength") ? ((Number) req.get("pathLength")).intValue() : 0;
+            Integer mazeId     = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
             int playerId = database.getOrCreatePlayer(playerName);
-            database.addAlgorithmRun(playerId, mazeId, mazeSize, algorithm, solveTimeMs, pathLength);
+            database.addAlgoRun(playerId, mazeId, mazeSize, algoName, solveTime, pathLength);
 
             ctx.json(Map.of("success", true));
         });
 
         app.get("/api/scores/top", ctx -> {
             int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
-            ctx.json(database.getTopAlgorithmRuns(limit));
+            ctx.json(database.getTopAlgoRuns(limit));
         });
 
-        // ─── Manual Attempt ────────────────────────────────────────────────
+        // ─── MANUAL — submit & leaderboard ────────────────────────────────
 
         app.post("/api/attempts", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
             String  playerName = (String)  req.get("playerName");
             String  mazeSize   = (String)  req.get("mazeSize");
-            long    durationMs = ((Number) req.get("durationMs")).longValue();
+            long    duration   = ((Number) req.get("duration")).longValue();
             int     steps      = ((Number) req.get("steps")).intValue();
             Integer mazeId     = req.get("mazeId") != null ? ((Number) req.get("mazeId")).intValue() : null;
 
             int playerId = database.getOrCreatePlayer(playerName);
-            database.addManualAttempt(playerId, mazeId, mazeSize, durationMs, steps);
+            database.addManual(playerId, mazeId, mazeSize, duration, steps);
 
             ctx.json(Map.of("success", true));
         });
 
         app.get("/api/attempts/top", ctx -> {
             int limit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(5);
-            ctx.json(database.getTopManualAttempts(limit));
+            ctx.json(database.getTopManual(limit));
         });
 
-        // ─── Saved Mazes ───────────────────────────────────────────────────
-        // NOTE: /api/mazes/saved MUST be registered before /api/mazes/{id}
-        // so Javalin does not treat the literal "saved" as an id parameter.
+        // ─── SAVES + MAZE ──────────────────────────────────────────────────
+        // NOTE: /api/mazes/saved must be declared before /api/mazes/{id}
 
         app.post("/api/mazes/save", ctx -> {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
@@ -123,8 +122,12 @@ public class Main {
             int    cols     = ((Number) mazeData.get("cols")).intValue();
             String gridJson = mapper.writeValueAsString(mazeData);
 
+            // 1. Insert MAZE (strong entity, independent of player)
+            int mazeId = database.insertMaze(rows, cols, gridJson);
+
+            // 2. Insert SAVES (associative entity linking this player to this maze)
             int playerId = database.getOrCreatePlayer(playerName);
-            int mazeId   = database.saveMaze(playerId, rows, cols, gridJson, label);
+            database.addSave(playerId, mazeId, label);
 
             ctx.json(Map.of("success", true, "mazeId", mazeId));
         });
@@ -134,8 +137,8 @@ public class Main {
         });
 
         app.get("/api/mazes/{id}", ctx -> {
-            int    id       = Integer.parseInt(ctx.pathParam("id"));
-            String gridJson = database.getMazeById(id);
+            int    mazeId   = Integer.parseInt(ctx.pathParam("id"));
+            String gridJson = database.getMazeById(mazeId);
 
             if (gridJson == null) {
                 ctx.status(404).json(Map.of("error", "Maze not found"));

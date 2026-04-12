@@ -243,16 +243,16 @@ class MazeMaster {
       const res    = await fetch('/api/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maze: this.maze, algorithm })
+        body: JSON.stringify({ maze: this.maze, algoName: algorithm })
       });
       const result = await res.json();
 
       this.solution          = result.solution;
-      this.solveTimeMs       = result.solveTimeMs;
+      this.solveTimeMs       = result.solveTime;
       this.currentPathLength = result.pathLength;
 
       this.el.pathLength.textContent    = result.pathLength;
-      this.el.solveTime.textContent     = `${result.solveTimeMs}ms`;
+      this.el.solveTime.textContent     = `${result.solveTime}ms`;
       this.el.submitScoreBtn.disabled   = false;
 
       if (this.el.animatePathCheck.checked) this.animateSolution();
@@ -506,9 +506,9 @@ class MazeMaster {
         body: JSON.stringify({
           playerName,
           mazeSize,
-          durationMs: Math.round(this.timerMs),
-          steps:      this.steps,
-          mazeId:     this.currentMazeId
+          duration: Math.round(this.timerMs),
+          steps:    this.steps,
+          mazeId:   this.currentMazeId
         })
       });
       this.hideAttemptModal();
@@ -546,10 +546,10 @@ class MazeMaster {
         body: JSON.stringify({
           playerName,
           mazeSize,
-          solveTimeMs: this.solveTimeMs,
-          algorithm,
-          pathLength:  this.currentPathLength,
-          mazeId:      this.currentMazeId
+          solveTime:  this.solveTimeMs,
+          algoName:   algorithm,
+          pathLength: this.currentPathLength,
+          mazeId:     this.currentMazeId
         })
       });
       this.hideScoreModal();
@@ -579,12 +579,13 @@ class MazeMaster {
       return;
     }
     this.el.scoresContainer.innerHTML =
-      `<div class="scores-header algo-header"><span>NAME</span><span>SIZE</span><span>TIME</span></div>` +
+      `<div class="scores-header algo-header"><span>NAME</span><span>SIZE</span><span>ALGO</span><span>TIME</span></div>` +
       scores.map(s => `
-        <div class="score-entry">
+        <div class="score-entry" style="grid-template-columns:1fr 1fr 1fr 1fr">
           <span>${s.playerName}</span>
           <span>${s.mazeSize}</span>
-          <span>${s.solveTimeMs}ms</span>
+          <span>${s.algoName.toUpperCase()}</span>
+          <span>${s.solveTime}ms</span>
         </div>
       `).join('');
   }
@@ -609,7 +610,7 @@ class MazeMaster {
           <span>${a.playerName}</span>
           <span>${a.mazeSize}</span>
           <span class="steps-col">${a.steps}</span>
-          <span>${this.formatTime(a.durationMs)}</span>
+          <span>${this.formatTime(a.duration)}</span>
         </div>
       `).join('');
   }
