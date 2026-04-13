@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap');
 
+[ng-cloak] { display: none !important; }
+
 :root {
     --blueprint-bg: #0a1628;
     --blueprint-dark: #050b14;
