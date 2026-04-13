@@ -1,0 +1,14 @@
+{
+  "name": "maze-master",
+  "version": "2.0.0",
+  "description": "Maze Master — Node.js/Express/MySQL backend",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev":   "node server/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2":  "^3.9.7"
+  }
+}

@@ -6,31 +6,125 @@
     <title>MAZE MASTER</title>
     <meta name="description" content="Maze Master: Generate, solve, save and manually navigate procedural mazes. Compete on the leaderboard.">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
+
+    <!-- Internal CSS: CSS Custom Properties (design tokens) defined here
+         cascade into the external stylesheet automatically.
+         Demonstrates Unit 4 "Internal Style Sheet" technique. -->
+    <style>
+        :root {
+            --blueprint-bg:           #0a1628;
+            --blueprint-dark:         #050b14;
+            --blueprint-grid:         #1a2f4a;
+            --blueprint-accent:       #00d9ff;
+            --blueprint-accent-glow:  rgba(0, 217, 255, 0.3);
+            --blueprint-text:         #e0f7ff;
+            --blueprint-text-dim:     #7ea8c4;
+            --solution-path:          #ff3366;
+            --solution-glow:          rgba(255, 51, 102, 0.4);
+            --success-color:          #00ff88;
+            --warning-color:          #ffaa00;
+            --player-color:           #cc33ff;
+            --player-glow:            rgba(204, 51, 255, 0.5);
+            --player-trail:           rgba(204, 51, 255, 0.12);
+        }
+
+        .student-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid var(--blueprint-accent);
+            padding: 0.2rem 0.75rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            color: var(--blueprint-accent);
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .login-fieldset {
+            border: 1px solid var(--blueprint-grid);
+            padding: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-legend {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            color: var(--blueprint-text-dim);
+            padding: 0 0.5rem;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            color: var(--blueprint-text);
+            cursor: pointer;
+        }
+
+        .radio-label input[type="radio"] {
+            accent-color: var(--blueprint-accent);
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .form-error {
+            display: block;
+            color: var(--solution-path);
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            margin-top: 0.3rem;
+        }
+    </style>
+
+    <!-- External CSS: main stylesheet (Unit 4 "External Style Sheet") -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
+<!-- ng-app bootstraps the Angular SPA; ng-controller attaches MazeController -->
 <body ng-controller="MazeController" ng-cloak>
     <div class="grid-overlay"></div>
 
     <header class="header">
         <div class="header-content">
-            <h1 class="title">MAZE MASTER</h1>
+            <!-- Inline style on <h1>: Unit 4 "Inline Style" demonstration -->
+            <h1 class="title" style="margin:0; line-height:1;">MAZE MASTER</h1>
             <div class="subtitle">GRID-TO-VECTOR LABYRINTH SYSTEM</div>
         </div>
         <div class="status-bar">
-            <span class="status-item" ng-class="statusClass">{{ status }}</span>
-            <span class="status-item">{{ playTimerStr }}</span>
+            <!-- Inline style: overrides border-radius for this specific element only -->
+            <span class="status-item" ng-class="statusClass"
+                  style="border-radius:2px; font-family:'Space Mono',monospace;">{{ status }}</span>
+            <span class="status-item" style="border-radius:2px;">{{ playTimerStr }}</span>
+
+            <!-- Student login badge: shown/hidden with ng-if -->
+            <span ng-if="!student" style="margin-left:1rem;">
+                <button class="btn-load" ng-click="openModal('login')"
+                        style="font-size:0.7rem; padding:0.3rem 0.75rem;">▶ LOGIN</button>
+            </span>
+            <span ng-if="student" class="student-badge">✓ {{ student.name }}</span>
         </div>
     </header>
 
     <main class="main-container">
         <aside class="control-panel">
 
+            <!-- Mode tabs: ng-class applies .active dynamically -->
             <div class="mode-tabs">
                 <button class="mode-tab" ng-class="{'active': mode === 'algorithm'}" ng-click="switchMode('algorithm')">ALGORITHM</button>
                 <button class="mode-tab" ng-class="{'active': mode === 'manual'}"    ng-click="switchMode('manual')">MANUAL PLAY</button>
             </div>
 
+            <!-- ══ ALGORITHM PANEL ══ -->
             <div class="mode-panel" ng-show="mode === 'algorithm'">
 
                 <section class="panel-section">
@@ -80,43 +174,55 @@
                     <div class="stat-row"><span class="stat-label">SOLVE TIME:</span>  <span class="stat-value">{{ solveTime }}</span></div>
                 </section>
 
+                <!-- Algorithm Leaderboard — HTML <table> (Unit 3 requirement) -->
                 <section class="panel-section">
                     <h2 class="panel-title">ALGORITHM SCORES</h2>
                     <div class="scores-container">
                         <div class="loading" ng-if="topAlgoRuns.length === 0">NO DATA</div>
-                        <div ng-if="topAlgoRuns.length > 0">
-                            <div class="scores-header" style="grid-template-columns:1fr 1fr 1fr 1fr">
-                                <span>NAME</span><span>SIZE</span><span>ALGO</span><span>TIME</span>
-                            </div>
-                            <div class="score-entry" style="grid-template-columns:1fr 1fr 1fr 1fr" ng-repeat="s in topAlgoRuns">
-                                <span>{{ s.playerName }}</span>
-                                <span>{{ s.mazeSize }}</span>
-                                <span>{{ s.algoName | uppercase }}</span>
-                                <span>{{ s.solveTime }}ms</span>
-                            </div>
-                        </div>
+                        <table class="score-table" ng-if="topAlgoRuns.length > 0">
+                            <thead>
+                                <tr>
+                                    <th>NAME</th><th>SIZE</th><th>ALGO</th><th>TIME</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- ng-repeat creates one <tr> per score object -->
+                                <tr ng-repeat="s in topAlgoRuns">
+                                    <td>{{ s.playerName }}</td>
+                                    <td>{{ s.mazeSize }}</td>
+                                    <td>{{ s.algoName | uppercase }}</td>
+                                    <td>{{ s.solveTime }}ms</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                     <button class="btn btn-tertiary" ng-click="openModal('score')" ng-disabled="!solution || scoreSubmitted">SUBMIT SCORE</button>
                 </section>
 
+                <!-- Saved Mazes Table (Unit 3: Table with interactive column) -->
                 <section class="panel-section">
                     <h2 class="panel-title">SAVED MAZES</h2>
                     <div class="scores-container">
                         <div class="loading" ng-if="savedMazes.length === 0">NO SAVED MAZES</div>
-                        <div ng-if="savedMazes.length > 0">
-                            <div class="scores-header saved-header"><span>LABEL</span><span>SIZE</span><span>BY</span><span></span></div>
-                            <div class="saved-maze-entry" ng-repeat="m in savedMazes">
-                                <span class="maze-label-col" title="{{ m.label }}">{{ m.label }}</span>
-                                <span>{{ m.rows }}×{{ m.cols }}</span>
-                                <span class="maze-player-col">{{ m.playerName }}</span>
-                                <button class="btn-load" ng-click="loadMaze(m.mazeId)">LOAD</button>
-                            </div>
-                        </div>
+                        <table class="score-table" ng-if="savedMazes.length > 0">
+                            <thead>
+                                <tr><th>LABEL</th><th>SIZE</th><th>BY</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="m in savedMazes">
+                                    <td title="{{ m.label }}" class="maze-label-col">{{ m.label }}</td>
+                                    <td>{{ m.rows }}×{{ m.cols }}</td>
+                                    <td class="maze-player-col">{{ m.playerName }}</td>
+                                    <td><button class="btn-load" ng-click="loadMaze(m.mazeId)">LOAD</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
-            </div>
+            </div><!-- /algorithm panel -->
 
+            <!-- ══ MANUAL PANEL ══ -->
             <div class="mode-panel" ng-show="mode === 'manual'">
 
                 <section class="panel-section">
@@ -155,47 +261,55 @@
 
                 <section class="panel-section">
                     <h2 class="panel-title">KEY BINDINGS</h2>
-                    <div class="key-hint">
-                        <div class="key-row">
-                            <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>
-                            <span>Move player</span>
-                        </div>
-                    </div>
+                    <!-- Unordered list for key bindings: Unit 2 (Lists) -->
+                    <ul class="key-list">
+                        <li class="key-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>Move player</span></li>
+                    </ul>
                 </section>
 
+                <!-- Manual Records Table (Unit 3: HTML Table) -->
                 <section class="panel-section">
                     <h2 class="panel-title">MANUAL PLAY RECORDS</h2>
                     <div class="scores-container">
                         <div class="loading" ng-if="topManualRuns.length === 0">NO DATA</div>
-                        <div ng-if="topManualRuns.length > 0">
-                            <div class="scores-header attempts-header"><span>NAME</span><span>SIZE</span><span>STEPS</span><span>TIME</span></div>
-                            <div class="attempt-entry" ng-repeat="a in topManualRuns">
-                                <span>{{ a.playerName }}</span>
-                                <span>{{ a.mazeSize }}</span>
-                                <span class="steps-col">{{ a.steps }}</span>
-                                <span>{{ formatTime(a.duration) }}</span>
-                            </div>
-                        </div>
+                        <table class="score-table" ng-if="topManualRuns.length > 0">
+                            <thead>
+                                <tr><th>NAME</th><th>SIZE</th><th>STEPS</th><th>TIME</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="a in topManualRuns">
+                                    <td>{{ a.playerName }}</td>
+                                    <td>{{ a.mazeSize }}</td>
+                                    <td style="color:var(--player-color); font-weight:700;">{{ a.steps }}</td>
+                                    <td>{{ formatTime(a.duration) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
+                <!-- Saved Mazes Table (manual panel copy) -->
                 <section class="panel-section">
                     <h2 class="panel-title">SAVED MAZES</h2>
                     <div class="scores-container">
                         <div class="loading" ng-if="savedMazes.length === 0">NO SAVED MAZES</div>
-                        <div ng-if="savedMazes.length > 0">
-                            <div class="scores-header saved-header"><span>LABEL</span><span>SIZE</span><span>BY</span><span></span></div>
-                            <div class="saved-maze-entry" ng-repeat="m in savedMazes">
-                                <span class="maze-label-col" title="{{ m.label }}">{{ m.label }}</span>
-                                <span>{{ m.rows }}×{{ m.cols }}</span>
-                                <span class="maze-player-col">{{ m.playerName }}</span>
-                                <button class="btn-load" ng-click="loadMaze(m.mazeId)">LOAD</button>
-                            </div>
-                        </div>
+                        <table class="score-table" ng-if="savedMazes.length > 0">
+                            <thead>
+                                <tr><th>LABEL</th><th>SIZE</th><th>BY</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="m in savedMazes">
+                                    <td title="{{ m.label }}" class="maze-label-col">{{ m.label }}</td>
+                                    <td>{{ m.rows }}×{{ m.cols }}</td>
+                                    <td class="maze-player-col">{{ m.playerName }}</td>
+                                    <td><button class="btn-load" ng-click="loadMaze(m.mazeId)">LOAD</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
-            </div>
+            </div><!-- /manual panel -->
 
         </aside>
 
@@ -213,6 +327,60 @@
         </div>
     </main>
 
+    <!-- ══ MODALS ══════════════════════════════════════════════════════════ -->
+
+    <!-- Student Login Modal — <form>, <fieldset>, <legend> (Unit 3/8) -->
+    <div class="modal" ng-class="{'active': activeModal === 'login'}">
+        <div class="modal-content">
+            <h2 class="modal-title">PLAYER REGISTRATION</h2>
+            <!-- ng-submit handles form submission; novalidate lets Angular validate -->
+            <form name="loginForm" ng-submit="submitLogin()" novalidate>
+                <fieldset class="login-fieldset">
+                    <legend class="login-legend">STUDENT INFORMATION</legend>
+
+                    <div class="control-group">
+                        <label for="loginName">DISPLAY NAME *</label>
+                        <input type="text" id="loginName"
+                               ng-model="loginData.name"
+                               name="displayName"
+                               placeholder="ENTER YOUR NAME"
+                               maxlength="20" required>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="loginId">STUDENT ID * (6 digits)</label>
+                        <input type="number" id="loginId"
+                               ng-model="loginData.studentId"
+                               name="studentId"
+                               placeholder="E.G. 123456"
+                               min="100000" max="999999" required>
+                    </div>
+
+                    <div class="control-group">
+                        <label>PREFERRED MODE</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" ng-model="loginData.preferredMode" value="algorithm"> ALGORITHM
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" ng-model="loginData.preferredMode" value="manual"> MANUAL PLAY
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- JS validation error shown via ng-show -->
+                <span class="form-error" ng-show="loginError">{{ loginError }}</span>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">ENTER SYSTEM</button>
+                    <button type="button" class="btn btn-secondary" ng-click="closeModal()">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Algorithm Score Modal -->
     <div class="modal" ng-class="{'active': activeModal === 'score'}">
         <div class="modal-content">
             <h2 class="modal-title">SUBMIT HIGH SCORE</h2>
@@ -227,6 +395,7 @@
         </div>
     </div>
 
+    <!-- Manual Win Modal -->
     <div class="modal" ng-class="{'active': activeModal === 'attempt'}">
         <div class="modal-content">
             <h2 class="modal-title win-title">🏆 MAZE CLEARED!</h2>
@@ -245,6 +414,7 @@
         </div>
     </div>
 
+    <!-- Give-Up Modal -->
     <div class="modal" ng-class="{'active': activeModal === 'giveUp'}">
         <div class="modal-content">
             <h2 class="modal-title giveup-title">SESSION TERMINATED</h2>
@@ -263,6 +433,7 @@
         </div>
     </div>
 
+    <!-- Save Maze Modal -->
     <div class="modal" ng-class="{'active': activeModal === 'saveMaze'}">
         <div class="modal-content">
             <h2 class="modal-title save-title">💾 SAVE MAZE</h2>

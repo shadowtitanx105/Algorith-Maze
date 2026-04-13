@@ -2,22 +2,7 @@
 
 [ng-cloak] { display: none !important; }
 
-:root {
-    --blueprint-bg: #0a1628;
-    --blueprint-dark: #050b14;
-    --blueprint-grid: #1a2f4a;
-    --blueprint-accent: #00d9ff;
-    --blueprint-accent-glow: rgba(0, 217, 255, 0.3);
-    --blueprint-text: #e0f7ff;
-    --blueprint-text-dim: #7ea8c4;
-    --solution-path: #ff3366;
-    --solution-glow: rgba(255, 51, 102, 0.4);
-    --success-color: #00ff88;
-    --warning-color: #ffaa00;
-    --player-color: #cc33ff;
-    --player-glow: rgba(204, 51, 255, 0.5);
-    --player-trail: rgba(204, 51, 255, 0.12);
-}
+
 
 * {
     margin: 0;
@@ -815,4 +800,59 @@ input[type="text"]:focus {
         flex-direction: column;
         gap: 0.5rem;
     }
+}
+
+/* ── HTML Tables (Unit 3/9) ────────────────────────────────────────────── */
+table.score-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+}
+
+table.score-table th {
+    background: rgba(0, 217, 255, 0.08);
+    color: var(--blueprint-accent);
+    letter-spacing: 0.1em;
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--blueprint-accent);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 700;
+}
+
+table.score-table td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid var(--blueprint-grid);
+    color: var(--blueprint-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90px;
+}
+
+table.score-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+table.score-table tbody tr:hover td {
+    background: rgba(0, 217, 255, 0.05);
+}
+
+/* ── Key List (Unit 2: Unordered List) ─────────────────────────────────── */
+.key-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.key-list .key-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--blueprint-text-dim);
 }

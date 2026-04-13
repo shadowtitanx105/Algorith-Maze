@@ -1,7 +1,37 @@
 var app = angular.module('mazeApp', []);
 
-app.controller('MazeController', ['$scope', '$http', '$interval', '$timeout',
-function($scope, $http, $interval, $timeout) {
+app.service('MazeService', ['$http', function($http) {
+    this.generate = function(rows, cols) {
+        return $http.post('/api/generate', { rows: rows, cols: cols });
+    };
+    this.solve = function(maze, algoName) {
+        return $http.post('/api/solve', { maze: maze, algoName: algoName });
+    };
+    this.saveMaze = function(playerName, label, mazeData) {
+        return $http.post('/api/mazes/save', { playerName: playerName, label: label, mazeData: mazeData });
+    };
+    this.loadMaze = function(id) {
+        return $http.get('/api/mazes/' + id);
+    };
+    this.getSavedMazes = function() {
+        return $http.get('/api/mazes/saved');
+    };
+    this.submitScore = function(payload) {
+        return $http.post('/api/scores', payload);
+    };
+    this.getTopScores = function(limit) {
+        return $http.get('/api/scores/top?limit=' + (limit || 5));
+    };
+    this.submitAttempt = function(payload) {
+        return $http.post('/api/attempts', payload);
+    };
+    this.getTopAttempts = function(limit) {
+        return $http.get('/api/attempts/top?limit=' + (limit || 5));
+    };
+}]);
+
+app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeService',
+function($scope, $interval, $timeout, MazeService) {
 
     $scope.mode          = 'algorithm';
     $scope.status        = 'STANDBY';
@@ -29,7 +59,10 @@ function($scope, $http, $interval, $timeout) {
 
     $scope.activeModal = '';
 
-    $scope.form = { playerName: '', attemptName: '', mazeLabel: '', saveName: '' };
+    $scope.form      = { playerName: '', attemptName: '', mazeLabel: '', saveName: '' };
+    $scope.loginData = { name: '', studentId: null, preferredMode: 'algorithm' };
+    $scope.loginError = '';
+    $scope.student   = null;
 
     $scope.isGenerating   = false;
     $scope.isSolving      = false;
@@ -56,9 +89,9 @@ function($scope, $http, $interval, $timeout) {
     $timeout(function() {
         canvas = document.getElementById('mazeCanvas');
         ctx    = canvas.getContext('2d');
-        loadHighScores();
-        loadTopAttempts();
-        loadSavedMazes();
+        MazeService.getTopScores(5).then(function(r)    { $scope.topAlgoRuns   = r.data; });
+        MazeService.getTopAttempts(5).then(function(r)  { $scope.topManualRuns = r.data; });
+        MazeService.getSavedMazes().then(function(r)    { $scope.savedMazes    = r.data; });
     }, 0);
 
     $scope.openModal  = function(name) { $scope.activeModal = name; };
@@ -69,6 +102,34 @@ function($scope, $http, $interval, $timeout) {
         $scope.mode = newMode;
         if (newMode === 'manual') $scope.solution = null;
         if ($scope.maze) $scope.render();
+    };
+
+    $scope.submitLogin = function() {
+        $scope.loginError = '';
+
+        var name = ($scope.loginData.name || '').trim();
+        var id   = parseInt($scope.loginData.studentId);
+
+        if (name.length < 2) {
+            $scope.loginError = 'Display name must be at least 2 characters.';
+            return;
+        }
+        if (isNaN(id) || String(id).length !== 6) {
+            $scope.loginError = 'Student ID must be exactly 6 digits (e.g. 123456).';
+            return;
+        }
+
+        $scope.student = {
+            name:      name,
+            studentId: id,
+            mode:      $scope.loginData.preferredMode || 'algorithm'
+        };
+
+        $scope.form.playerName  = name;
+        $scope.form.attemptName = name;
+        $scope.form.saveName    = name;
+        $scope.switchMode($scope.student.mode);
+        $scope.closeModal();
     };
 
     $scope.generateMaze = function(caller) {
@@ -83,7 +144,7 @@ function($scope, $http, $interval, $timeout) {
         $scope.isGenerating  = true;
         setStatus('GENERATING...');
 
-        $http.post('/api/generate', { rows: rows, cols: cols })
+        MazeService.generate(rows, cols)
             .then(function(response) {
                 $scope.maze           = response.data;
                 $scope.solution       = null;
@@ -105,7 +166,7 @@ function($scope, $http, $interval, $timeout) {
         $scope.isSolving = true;
         setStatus('SOLVING...');
 
-        $http.post('/api/solve', { maze: $scope.maze, algoName: $scope.selectedAlgo })
+        MazeService.solve($scope.maze, $scope.selectedAlgo)
             .then(function(response) {
                 $scope.solution       = response.data.solution;
                 solveTimeMs           = response.data.solveTime;
@@ -116,7 +177,6 @@ function($scope, $http, $interval, $timeout) {
 
                 if ($scope.animatePath) animateSolution();
                 else $scope.render();
-
                 setStatus('SOLVED');
             })
             .catch(function() { setStatus('ERROR'); })
@@ -130,22 +190,20 @@ function($scope, $http, $interval, $timeout) {
         var label = $scope.form.mazeLabel.trim() ||
                     ($scope.maze.rows + '×' + $scope.maze.cols + ' Maze');
 
-        $http.post('/api/mazes/save', {
-            playerName: $scope.form.saveName.trim(),
-            label:      label,
-            mazeData:   $scope.maze
-        }).then(function(response) {
-            $scope.currentMazeId  = response.data.mazeId;
-            $scope.mazeSaved      = true;
-            $scope.closeModal();
-            $scope.form.saveName  = '';
-            $scope.form.mazeLabel = '';
-            loadSavedMazes();
-        }).catch(function() { alert('Failed to save maze'); });
+        MazeService.saveMaze($scope.form.saveName.trim(), label, $scope.maze)
+            .then(function(response) {
+                $scope.currentMazeId  = response.data.mazeId;
+                $scope.mazeSaved      = true;
+                $scope.closeModal();
+                $scope.form.saveName  = '';
+                $scope.form.mazeLabel = '';
+                MazeService.getSavedMazes().then(function(r) { $scope.savedMazes = r.data; });
+            })
+            .catch(function() { alert('Failed to save maze'); });
     };
 
     $scope.loadMaze = function(id) {
-        $http.get('/api/mazes/' + id)
+        MazeService.loadMaze(id)
             .then(function(response) {
                 $scope.maze           = response.data;
                 $scope.currentMazeId  = id;
@@ -166,7 +224,7 @@ function($scope, $http, $interval, $timeout) {
 
     $scope.submitScore = function() {
         if (!$scope.form.playerName.trim()) { alert('Enter player name'); return; }
-        $http.post('/api/scores', {
+        MazeService.submitScore({
             playerName: $scope.form.playerName.trim(),
             mazeSize:   $scope.maze.rows + 'x' + $scope.maze.cols,
             solveTime:  solveTimeMs,
@@ -177,13 +235,13 @@ function($scope, $http, $interval, $timeout) {
             $scope.scoreSubmitted  = true;
             $scope.form.playerName = '';
             $scope.closeModal();
-            loadHighScores();
+            MazeService.getTopScores(5).then(function(r) { $scope.topAlgoRuns = r.data; });
         });
     };
 
     $scope.submitAttempt = function() {
         if (!$scope.form.attemptName.trim()) { alert('Enter player name'); return; }
-        $http.post('/api/attempts', {
+        MazeService.submitAttempt({
             playerName: $scope.form.attemptName.trim(),
             mazeSize:   $scope.maze.rows + 'x' + $scope.maze.cols,
             duration:   Math.round($scope.playTimerMs),
@@ -192,19 +250,9 @@ function($scope, $http, $interval, $timeout) {
         }).then(function() {
             $scope.form.attemptName = '';
             $scope.closeModal();
-            loadTopAttempts();
+            MazeService.getTopAttempts(5).then(function(r) { $scope.topManualRuns = r.data; });
         });
     };
-
-    function loadHighScores() {
-        $http.get('/api/scores/top?limit=5').then(function(r) { $scope.topAlgoRuns = r.data; });
-    }
-    function loadTopAttempts() {
-        $http.get('/api/attempts/top?limit=5').then(function(r) { $scope.topManualRuns = r.data; });
-    }
-    function loadSavedMazes() {
-        $http.get('/api/mazes/saved').then(function(r) { $scope.savedMazes = r.data; });
-    }
 
     $scope.startManualPlay = function() {
         if (!$scope.maze) return;
@@ -318,9 +366,8 @@ function($scope, $http, $interval, $timeout) {
     function renderTrail() {
         $scope.visitedCells.forEach(function(key) {
             var parts = key.split(',');
-            var r = parseInt(parts[0]), c = parseInt(parts[1]);
             ctx.fillStyle = 'rgba(204,51,255,0.13)';
-            ctx.fillRect(c * cellSize + 1, r * cellSize + 1, cellSize - 2, cellSize - 2);
+            ctx.fillRect(parseInt(parts[1]) * cellSize + 1, parseInt(parts[0]) * cellSize + 1, cellSize - 2, cellSize - 2);
         });
     }
 
@@ -414,19 +461,14 @@ app.directive('mzKeyHandler', function() {
         restrict: 'A',
         link: function(scope) {
             var keyMap = {
-                ArrowUp:    'top',
-                ArrowDown:  'bottom',
-                ArrowLeft:  'left',
-                ArrowRight: 'right'
+                ArrowUp: 'top', ArrowDown: 'bottom',
+                ArrowLeft: 'left', ArrowRight: 'right'
             };
-
             document.addEventListener('keydown', function(e) {
                 var dir = keyMap[e.key];
                 if (!dir || scope.mode !== 'manual') return;
                 e.preventDefault();
-                scope.$apply(function() {
-                    scope.movePlayer(dir);
-                });
+                scope.$apply(function() { scope.movePlayer(dir); });
             });
         }
     };
