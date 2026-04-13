@@ -115,8 +115,6 @@ body {
     flex-direction: column;
     gap: 0;
 }
-
-/* ── Mode Tabs ── */
 .mode-tabs {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -164,8 +162,6 @@ body {
     background: rgba(0, 217, 255, 0.05);
     color: var(--blueprint-text);
 }
-
-/* ── Mode Panels ── */
 .mode-panel {
     display: flex;
     flex-direction: column;
@@ -175,8 +171,6 @@ body {
 .mode-panel.hidden {
     display: none;
 }
-
-/* ── Shared Sections ── */
 .panel-section {
     background: rgba(10, 22, 40, 0.7);
     border: 1px solid var(--blueprint-accent);
@@ -247,8 +241,6 @@ body {
     margin: 0;
     cursor: pointer;
 }
-
-/* ── Buttons ── */
 .btn {
     width: 100%;
     padding: 0.9rem;
@@ -337,8 +329,6 @@ body {
     opacity: 0.3;
     cursor: not-allowed;
 }
-
-/* ── Metrics ── */
 .stats-section .stat-row {
     display: flex;
     justify-content: space-between;
@@ -359,8 +349,6 @@ body {
     font-weight: 700;
     color: var(--blueprint-accent);
 }
-
-/* ── Leaderboards ── */
 .scores-container {
     max-height: 200px;
     overflow-y: auto;
@@ -418,8 +406,6 @@ body {
     color: var(--blueprint-text-dim);
     padding: 1rem;
 }
-
-/* ── Play Display (timer + steps) ── */
 .play-display {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -467,8 +453,6 @@ body {
     0% { transform: scale(1.1); }
     100% { transform: scale(1); }
 }
-
-/* ── Key Hint ── */
 .key-hint {
     display: flex;
     flex-direction: column;
@@ -497,8 +481,6 @@ kbd {
     color: var(--blueprint-accent);
     box-shadow: 0 2px 0 var(--blueprint-accent);
 }
-
-/* ── Canvas ── */
 .canvas-container {
     position: relative;
     display: flex;
@@ -572,8 +554,6 @@ kbd {
     border-color: var(--player-color);
     box-shadow: 0 0 5px var(--player-glow);
 }
-
-/* ── Modals ── */
 .modal {
     display: none;
     position: fixed;
@@ -637,8 +617,6 @@ kbd {
     gap: 1rem;
     margin-top: 1.5rem;
 }
-
-/* ── Win Stats ── */
 .win-stats {
     background: rgba(0, 255, 136, 0.05);
     border: 1px solid rgba(0, 255, 136, 0.2);
@@ -663,8 +641,6 @@ kbd {
     color: var(--success-color);
     font-family: 'Orbitron', sans-serif;
 }
-
-/* ── Give Up Modal Actions ── */
 .giveup-actions {
     display: flex;
     flex-direction: column;
@@ -701,8 +677,6 @@ kbd {
     top: 50%;
     transform: translateY(-50%);
 }
-
-/* ── Text inputs ── */
 input[type="text"] {
     width: 100%;
     padding: 0.75rem;
@@ -718,8 +692,6 @@ input[type="text"]:focus {
     border-color: var(--blueprint-accent);
     box-shadow: 0 0 10px var(--blueprint-accent-glow);
 }
-
-/* ── Save Maze Button ── */
 .btn-save {
     color: var(--warning-color);
     border-color: var(--warning-color);
@@ -730,8 +702,6 @@ input[type="text"]:focus {
     color: var(--blueprint-dark);
     box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
 }
-
-/* ── Saved Maze List ── */
 .scores-header.saved-header {
     grid-template-columns: 2fr 1fr 1fr 2rem;
 }
@@ -783,14 +753,10 @@ input[type="text"]:focus {
     color: var(--blueprint-dark);
     box-shadow: 0 0 8px var(--blueprint-accent-glow);
 }
-
-/* ── Save Maze Modal Title ── */
 .save-title {
     color: var(--warning-color);
     text-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
 }
-
-/* ── Responsive ── */
 @media (max-width: 1200px) {
     .main-container {
         grid-template-columns: 1fr;
@@ -801,8 +767,6 @@ input[type="text"]:focus {
         gap: 0.5rem;
     }
 }
-
-/* ── HTML Tables (Unit 3/9) ────────────────────────────────────────────── */
 table.score-table {
     width: 100%;
     border-collapse: collapse;
@@ -838,8 +802,6 @@ table.score-table tbody tr:last-child td {
 table.score-table tbody tr:hover td {
     background: rgba(0, 217, 255, 0.05);
 }
-
-/* ── Key List (Unit 2: Unordered List) ─────────────────────────────────── */
 .key-list {
     list-style: none;
     padding: 0;
