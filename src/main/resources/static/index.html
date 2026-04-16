@@ -1,88 +1,17 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="mazeApp">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAZE MASTER</title>
-    <meta name="description" content="Maze Master: Generate, solve, save and manually navigate procedural mazes. Compete on the leaderboard.">
+    <meta name="description"
+        content="Maze Master: Generate, solve, save and manually navigate procedural mazes. Compete on the leaderboard.">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
-    <style>
-        :root {
-            --blueprint-bg:           #0a1628;
-            --blueprint-dark:         #050b14;
-            --blueprint-grid:         #1a2f4a;
-            --blueprint-accent:       #00d9ff;
-            --blueprint-accent-glow:  rgba(0, 217, 255, 0.3);
-            --blueprint-text:         #e0f7ff;
-            --blueprint-text-dim:     #7ea8c4;
-            --solution-path:          #ff3366;
-            --solution-glow:          rgba(255, 51, 102, 0.4);
-            --success-color:          #00ff88;
-            --warning-color:          #ffaa00;
-            --player-color:           #cc33ff;
-            --player-glow:            rgba(204, 51, 255, 0.5);
-            --player-trail:           rgba(204, 51, 255, 0.12);
-        }
 
-        .student-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            border: 1px solid var(--blueprint-accent);
-            padding: 0.2rem 0.75rem;
-            font-size: 0.75rem;
-            letter-spacing: 0.1em;
-            color: var(--blueprint-accent);
-            background: rgba(0, 217, 255, 0.05);
-        }
-
-        .login-fieldset {
-            border: 1px solid var(--blueprint-grid);
-            padding: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .login-legend {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.7rem;
-            letter-spacing: 0.2em;
-            color: var(--blueprint-text-dim);
-            padding: 0 0.5rem;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 1.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.8rem;
-            letter-spacing: 0.1em;
-            color: var(--blueprint-text);
-            cursor: pointer;
-        }
-
-        .radio-label input[type="radio"] {
-            accent-color: var(--blueprint-accent);
-            width: 1rem;
-            height: 1rem;
-            cursor: pointer;
-        }
-
-        .form-error {
-            display: block;
-            color: var(--solution-path);
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            margin-top: 0.3rem;
-        }
-    </style>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body ng-controller="MazeController" ng-cloak>
     <div class="grid-overlay"></div>
 
@@ -93,11 +22,11 @@
         </div>
         <div class="status-bar">
             <span class="status-item" ng-class="statusClass"
-                  style="border-radius:2px; font-family:'Space Mono',monospace;">{{ status }}</span>
+                style="border-radius:2px; font-family:'Space Mono',monospace;">{{ status }}</span>
             <span class="status-item" style="border-radius:2px;">{{ playTimerStr }}</span>
             <span ng-if="!student" style="margin-left:1rem;">
                 <button class="btn-load" ng-click="openModal('login')"
-                        style="font-size:0.7rem; padding:0.3rem 0.75rem;">▶ LOGIN</button>
+                    style="font-size:0.7rem; padding:0.3rem 0.75rem;">▶ LOGIN</button>
             </span>
             <span ng-if="student" class="student-badge">✓ {{ student.name }}</span>
         </div>
@@ -106,8 +35,10 @@
     <main class="main-container">
         <aside class="control-panel">
             <div class="mode-tabs">
-                <button class="mode-tab" ng-class="{'active': mode === 'algorithm'}" ng-click="switchMode('algorithm')">ALGORITHM</button>
-                <button class="mode-tab" ng-class="{'active': mode === 'manual'}"    ng-click="switchMode('manual')">MANUAL PLAY</button>
+                <button class="mode-tab" ng-class="{'active': mode === 'algorithm'}"
+                    ng-click="switchMode('algorithm')">ALGORITHM</button>
+                <button class="mode-tab" ng-class="{'active': mode === 'manual'}" ng-click="switchMode('manual')">MANUAL
+                    PLAY</button>
             </div>
             <div class="mode-panel" ng-show="mode === 'algorithm'">
 
@@ -121,8 +52,10 @@
                         <label for="algoCols">COLUMNS</label>
                         <input type="number" id="algoCols" ng-model="algoCols" min="5" max="50">
                     </div>
-                    <button class="btn btn-primary" ng-click="generateMaze('algorithm')" ng-disabled="isGenerating">GENERATE</button>
-                    <button class="btn btn-save"    ng-click="openModal('saveMaze')"    ng-disabled="!canSaveMaze()" style="margin-top:0.75rem">
+                    <button class="btn btn-primary" ng-click="generateMaze('algorithm')"
+                        ng-disabled="isGenerating">GENERATE</button>
+                    <button class="btn btn-save" ng-click="openModal('saveMaze')" ng-disabled="!canSaveMaze()"
+                        style="margin-top:0.75rem">
                         {{ mazeSaved ? 'SAVED ✓' : 'SAVE MAZE' }}
                     </button>
                 </section>
@@ -136,7 +69,8 @@
                             <option value="dijkstra">DIJKSTRA'S</option>
                         </select>
                     </div>
-                    <button class="btn btn-secondary" ng-click="solveMaze()" ng-disabled="!maze || isSolving">SOLVE</button>
+                    <button class="btn btn-secondary" ng-click="solveMaze()"
+                        ng-disabled="!maze || isSolving">SOLVE</button>
                 </section>
 
                 <section class="panel-section">
@@ -153,9 +87,12 @@
 
                 <section class="panel-section stats-section">
                     <h2 class="panel-title">METRICS</h2>
-                    <div class="stat-row"><span class="stat-label">MAZE SIZE:</span>   <span class="stat-value">{{ mazeSize }}</span></div>
-                    <div class="stat-row"><span class="stat-label">PATH LENGTH:</span> <span class="stat-value">{{ pathLength }}</span></div>
-                    <div class="stat-row"><span class="stat-label">SOLVE TIME:</span>  <span class="stat-value">{{ solveTime }}</span></div>
+                    <div class="stat-row"><span class="stat-label">MAZE SIZE:</span> <span class="stat-value">{{
+                            mazeSize }}</span></div>
+                    <div class="stat-row"><span class="stat-label">PATH LENGTH:</span> <span class="stat-value">{{
+                            pathLength }}</span></div>
+                    <div class="stat-row"><span class="stat-label">SOLVE TIME:</span> <span class="stat-value">{{
+                            solveTime }}</span></div>
                 </section>
                 <section class="panel-section">
                     <h2 class="panel-title">ALGORITHM SCORES</h2>
@@ -164,7 +101,10 @@
                         <table class="score-table" ng-if="topAlgoRuns.length > 0">
                             <thead>
                                 <tr>
-                                    <th>NAME</th><th>SIZE</th><th>ALGO</th><th>TIME</th>
+                                    <th>NAME</th>
+                                    <th>SIZE</th>
+                                    <th>ALGO</th>
+                                    <th>TIME</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,7 +117,8 @@
                             </tbody>
                         </table>
                     </div>
-                    <button class="btn btn-tertiary" ng-click="openModal('score')" ng-disabled="!solution || scoreSubmitted">SUBMIT SCORE</button>
+                    <button class="btn btn-tertiary" ng-click="openModal('score')"
+                        ng-disabled="!solution || scoreSubmitted">SUBMIT SCORE</button>
                 </section>
                 <section class="panel-section">
                     <h2 class="panel-title">SAVED MAZES</h2>
@@ -185,7 +126,12 @@
                         <div class="loading" ng-if="savedMazes.length === 0">NO SAVED MAZES</div>
                         <table class="score-table" ng-if="savedMazes.length > 0">
                             <thead>
-                                <tr><th>LABEL</th><th>SIZE</th><th>BY</th><th></th></tr>
+                                <tr>
+                                    <th>LABEL</th>
+                                    <th>SIZE</th>
+                                    <th>BY</th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr ng-repeat="m in savedMazes">
@@ -212,8 +158,10 @@
                         <label for="manualCols">COLUMNS</label>
                         <input type="number" id="manualCols" ng-model="manualCols" min="5" max="50">
                     </div>
-                    <button class="btn btn-primary" ng-click="generateMaze('manual')" ng-disabled="isGenerating">GENERATE</button>
-                    <button class="btn btn-save"    ng-click="openModal('saveMaze')"  ng-disabled="!canSaveMaze()" style="margin-top:0.75rem">
+                    <button class="btn btn-primary" ng-click="generateMaze('manual')"
+                        ng-disabled="isGenerating">GENERATE</button>
+                    <button class="btn btn-save" ng-click="openModal('saveMaze')" ng-disabled="!canSaveMaze()"
+                        style="margin-top:0.75rem">
                         {{ mazeSaved ? 'SAVED ✓' : 'SAVE MAZE' }}
                     </button>
                 </section>
@@ -233,13 +181,15 @@
                     <button class="btn btn-primary" ng-click="startManualPlay()" ng-disabled="!maze">
                         {{ playActive ? 'RESTART' : 'START' }}
                     </button>
-                    <button class="btn btn-danger" ng-click="giveUp()" ng-disabled="!playActive" style="margin-top:0.75rem">GIVE UP</button>
+                    <button class="btn btn-danger" ng-click="giveUp()" ng-disabled="!playActive"
+                        style="margin-top:0.75rem">GIVE UP</button>
                 </section>
 
                 <section class="panel-section">
                     <h2 class="panel-title">KEY BINDINGS</h2>
                     <ul class="key-list">
-                        <li class="key-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>Move player</span></li>
+                        <li class="key-row"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>Move player</span>
+                        </li>
                     </ul>
                 </section>
                 <section class="panel-section">
@@ -248,7 +198,12 @@
                         <div class="loading" ng-if="topManualRuns.length === 0">NO DATA</div>
                         <table class="score-table" ng-if="topManualRuns.length > 0">
                             <thead>
-                                <tr><th>NAME</th><th>SIZE</th><th>STEPS</th><th>TIME</th></tr>
+                                <tr>
+                                    <th>NAME</th>
+                                    <th>SIZE</th>
+                                    <th>STEPS</th>
+                                    <th>TIME</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr ng-repeat="a in topManualRuns">
@@ -267,7 +222,12 @@
                         <div class="loading" ng-if="savedMazes.length === 0">NO SAVED MAZES</div>
                         <table class="score-table" ng-if="savedMazes.length > 0">
                             <thead>
-                                <tr><th>LABEL</th><th>SIZE</th><th>BY</th><th></th></tr>
+                                <tr>
+                                    <th>LABEL</th>
+                                    <th>SIZE</th>
+                                    <th>BY</th>
+                                    <th></th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr ng-repeat="m in savedMazes">
@@ -288,10 +248,18 @@
         <div class="canvas-container" mz-key-handler>
             <canvas id="mazeCanvas"></canvas>
             <div class="canvas-legend">
-                <div class="legend-item"><div class="legend-color wall"></div><span>WALL STRUCTURE</span></div>
-                <div class="legend-item"><div class="legend-color path"></div><span>SOLUTION PATH</span></div>
-                <div class="legend-item"><div class="legend-color start"></div><span>START NODE</span></div>
-                <div class="legend-item"><div class="legend-color end"></div><span>END NODE</span></div>
+                <div class="legend-item">
+                    <div class="legend-color wall"></div><span>WALL STRUCTURE</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color path"></div><span>SOLUTION PATH</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color start"></div><span>START NODE</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color end"></div><span>END NODE</span>
+                </div>
                 <div class="legend-item" ng-show="mode === 'manual'">
                     <div class="legend-color player"></div><span>PLAYER</span>
                 </div>
@@ -307,20 +275,14 @@
 
                     <div class="control-group">
                         <label for="loginName">DISPLAY NAME *</label>
-                        <input type="text" id="loginName"
-                               ng-model="loginData.name"
-                               name="displayName"
-                               placeholder="ENTER YOUR NAME"
-                               maxlength="20" required>
+                        <input type="text" id="loginName" ng-model="loginData.name" name="displayName"
+                            placeholder="ENTER YOUR NAME" maxlength="20" required>
                     </div>
 
                     <div class="control-group">
                         <label for="loginId">STUDENT ID * (6 digits)</label>
-                        <input type="number" id="loginId"
-                               ng-model="loginData.studentId"
-                               name="studentId"
-                               placeholder="E.G. 123456"
-                               min="100000" max="999999" required>
+                        <input type="number" id="loginId" ng-model="loginData.studentId" name="studentId"
+                            placeholder="E.G. 123456" min="100000" max="999999" required>
                     </div>
 
                     <div class="control-group">
@@ -349,10 +311,11 @@
             <h2 class="modal-title">SUBMIT HIGH SCORE</h2>
             <div class="control-group">
                 <label for="playerNameInput">PLAYER NAME</label>
-                <input type="text" id="playerNameInput" ng-model="form.playerName" maxlength="20" placeholder="ENTER NAME">
+                <input type="text" id="playerNameInput" ng-model="form.playerName" maxlength="20"
+                    placeholder="ENTER NAME">
             </div>
             <div class="modal-actions">
-                <button class="btn btn-primary"   ng-click="submitScore()">SUBMIT</button>
+                <button class="btn btn-primary" ng-click="submitScore()">SUBMIT</button>
                 <button class="btn btn-secondary" ng-click="closeModal()">CANCEL</button>
             </div>
         </div>
@@ -361,15 +324,16 @@
         <div class="modal-content">
             <h2 class="modal-title win-title">🏆 MAZE CLEARED!</h2>
             <div class="win-stats">
-                <div class="win-stat-row"><span>TIME</span>  <span>{{ playTimerStr }}</span></div>
+                <div class="win-stat-row"><span>TIME</span> <span>{{ playTimerStr }}</span></div>
                 <div class="win-stat-row"><span>STEPS</span> <span>{{ playSteps }}</span></div>
             </div>
             <div class="control-group" style="margin-top:1.5rem">
                 <label for="attemptNameInput">PLAYER NAME</label>
-                <input type="text" id="attemptNameInput" ng-model="form.attemptName" maxlength="20" placeholder="ENTER NAME">
+                <input type="text" id="attemptNameInput" ng-model="form.attemptName" maxlength="20"
+                    placeholder="ENTER NAME">
             </div>
             <div class="modal-actions">
-                <button class="btn btn-primary"   ng-click="submitAttempt()">SUBMIT</button>
+                <button class="btn btn-primary" ng-click="submitAttempt()">SUBMIT</button>
                 <button class="btn btn-secondary" ng-click="closeModal()">SKIP</button>
             </div>
         </div>
@@ -379,13 +343,14 @@
             <h2 class="modal-title giveup-title">SESSION TERMINATED</h2>
             <p class="modal-subtitle">What would you like to do?</p>
             <div class="giveup-actions">
-                <button class="btn btn-primary giveup-btn"   ng-click="tryAgain()">
+                <button class="btn btn-primary giveup-btn" ng-click="tryAgain()">
                     <span class="giveup-btn-icon">↺</span> TRY AGAIN <span class="giveup-btn-sub">Same maze</span>
                 </button>
                 <button class="btn btn-secondary giveup-btn" ng-click="tryAlgorithm()">
-                    <span class="giveup-btn-icon">⚡</span> TRY ALGORITHM <span class="giveup-btn-sub">Watch it solved</span>
+                    <span class="giveup-btn-icon">⚡</span> TRY ALGORITHM <span class="giveup-btn-sub">Watch it
+                        solved</span>
                 </button>
-                <button class="btn btn-warning giveup-btn"   ng-click="newMaze()">
+                <button class="btn btn-warning giveup-btn" ng-click="newMaze()">
                     <span class="giveup-btn-icon">⊞</span> NEW MAZE <span class="giveup-btn-sub">Generate fresh</span>
                 </button>
             </div>
@@ -396,14 +361,15 @@
             <h2 class="modal-title save-title">💾 SAVE MAZE</h2>
             <div class="control-group">
                 <label for="mazeLabelInput">MAZE LABEL</label>
-                <input type="text" id="mazeLabelInput" ng-model="form.mazeLabel" maxlength="40" placeholder="E.G. MY TRICKY MAZE">
+                <input type="text" id="mazeLabelInput" ng-model="form.mazeLabel" maxlength="40"
+                    placeholder="E.G. MY TRICKY MAZE">
             </div>
             <div class="control-group">
                 <label for="saveNameInput">YOUR NAME</label>
                 <input type="text" id="saveNameInput" ng-model="form.saveName" maxlength="20" placeholder="ENTER NAME">
             </div>
             <div class="modal-actions">
-                <button class="btn btn-primary"   ng-click="saveMaze()">SAVE</button>
+                <button class="btn btn-primary" ng-click="saveMaze()">SAVE</button>
                 <button class="btn btn-secondary" ng-click="closeModal()">CANCEL</button>
             </div>
         </div>
@@ -411,4 +377,5 @@
 
     <script src="js/app.js"></script>
 </body>
+
 </html>
