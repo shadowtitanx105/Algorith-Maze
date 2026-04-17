@@ -1,37 +1,37 @@
 var app = angular.module('mazeApp', []);
 
-app.service('MazeService', ['$http', function($http) {
-  this.generate = function(rows, cols) {
+app.service('MazeService', ['$http', function ($http) {
+  this.generate = function (rows, cols) {
     return $http.post('/api/generate', { rows: rows, cols: cols });
   };
-  this.solve = function(maze, algoName) {
+  this.solve = function (maze, algoName) {
     return $http.post('/api/solve', { maze: maze, algoName: algoName });
   };
-  this.saveMaze = function(playerName, label, mazeData) {
+  this.saveMaze = function (playerName, label, mazeData) {
     return $http.post('/api/mazes/save', { playerName: playerName, label: label, mazeData: mazeData });
   };
-  this.loadMaze = function(id) {
+  this.loadMaze = function (id) {
     return $http.get('/api/mazes/' + id);
   };
-  this.getSavedMazes = function() {
+  this.getSavedMazes = function () {
     return $http.get('/api/mazes/saved');
   };
-  this.submitScore = function(payload) {
+  this.submitScore = function (payload) {
     return $http.post('/api/scores', payload);
   };
-  this.getTopScores = function(limit) {
+  this.getTopScores = function (limit) {
     return $http.get('/api/scores/top?limit=' + (limit || 5));
   };
-  this.submitAttempt = function(payload) {
+  this.submitAttempt = function (payload) {
     return $http.post('/api/attempts', payload);
   };
-  this.getTopAttempts = function(limit) {
+  this.getTopAttempts = function (limit) {
     return $http.get('/api/attempts/top?limit=' + (limit || 5));
   };
 }]);
 
 app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeService',
-  function($scope, $interval, $timeout, MazeService) {
+  function ($scope, $interval, $timeout, MazeService) {
 
     $scope.mode = 'algorithm';
     $scope.status = 'STANDBY';
@@ -86,25 +86,25 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
     var ctx = null;
     var cellSize = 20;
 
-    $timeout(function() {
+    $timeout(function () {
       canvas = document.getElementById('mazeCanvas');
       ctx = canvas.getContext('2d');
-      MazeService.getTopScores(5).then(function(r) { $scope.topAlgoRuns = r.data; });
-      MazeService.getTopAttempts(5).then(function(r) { $scope.topManualRuns = r.data; });
-      MazeService.getSavedMazes().then(function(r) { $scope.savedMazes = r.data; });
+      MazeService.getTopScores(5).then(function (r) { $scope.topAlgoRuns = r.data; });
+      MazeService.getTopAttempts(5).then(function (r) { $scope.topManualRuns = r.data; });
+      MazeService.getSavedMazes().then(function (r) { $scope.savedMazes = r.data; });
     }, 0);
 
-    $scope.openModal = function(name) { $scope.activeModal = name; };
-    $scope.closeModal = function() { $scope.activeModal = ''; };
+    $scope.openModal = function (name) { $scope.activeModal = name; };
+    $scope.closeModal = function () { $scope.activeModal = ''; };
 
-    $scope.switchMode = function(newMode) {
+    $scope.switchMode = function (newMode) {
       if ($scope.mode === 'manual' && newMode !== 'manual') stopTimer();
       $scope.mode = newMode;
       if (newMode === 'manual') $scope.solution = null;
       if ($scope.maze) $scope.render();
     };
 
-    $scope.submitLogin = function() {
+    $scope.submitLogin = function () {
       $scope.loginError = '';
 
       var name = ($scope.loginData.name || '').trim();
@@ -132,7 +132,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       $scope.closeModal();
     };
 
-    $scope.generateMaze = function(caller) {
+    $scope.generateMaze = function (caller) {
       var rows = parseInt(caller === 'manual' ? $scope.manualRows : $scope.algoRows);
       var cols = parseInt(caller === 'manual' ? $scope.manualCols : $scope.algoCols);
 
@@ -145,7 +145,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       setStatus('GENERATING...');
 
       MazeService.generate(rows, cols)
-        .then(function(response) {
+        .then(function (response) {
           $scope.maze = response.data;
           $scope.solution = null;
           $scope.scoreSubmitted = true;
@@ -157,17 +157,17 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
           $scope.render();
           setStatus('READY');
         })
-        .catch(function() { setStatus('ERROR'); })
-        .finally(function() { $scope.isGenerating = false; });
+        .catch(function () { setStatus('ERROR'); })
+        .finally(function () { $scope.isGenerating = false; });
     };
 
-    $scope.solveMaze = function() {
+    $scope.solveMaze = function () {
       if (!$scope.maze) return;
       $scope.isSolving = true;
       setStatus('SOLVING...');
 
       MazeService.solve($scope.maze, $scope.selectedAlgo)
-        .then(function(response) {
+        .then(function (response) {
           $scope.solution = response.data.solution;
           solveTimeMs = response.data.solveTime;
           currentPathLength = response.data.pathLength;
@@ -179,32 +179,32 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
           else $scope.render();
           setStatus('SOLVED');
         })
-        .catch(function() { setStatus('ERROR'); })
-        .finally(function() { $scope.isSolving = false; });
+        .catch(function () { setStatus('ERROR'); })
+        .finally(function () { $scope.isSolving = false; });
     };
 
-    $scope.canSaveMaze = function() { return !!$scope.maze && !$scope.mazeSaved; };
+    $scope.canSaveMaze = function () { return !!$scope.maze && !$scope.mazeSaved; };
 
-    $scope.saveMaze = function() {
+    $scope.saveMaze = function () {
       if (!$scope.form.saveName.trim()) { alert('Please enter your name'); return; }
       var label = $scope.form.mazeLabel.trim() ||
         ($scope.maze.rows + '×' + $scope.maze.cols + ' Maze');
 
       MazeService.saveMaze($scope.form.saveName.trim(), label, $scope.maze)
-        .then(function(response) {
+        .then(function (response) {
           $scope.currentMazeId = response.data.mazeId;
           $scope.mazeSaved = true;
           $scope.closeModal();
           $scope.form.saveName = '';
           $scope.form.mazeLabel = '';
-          MazeService.getSavedMazes().then(function(r) { $scope.savedMazes = r.data; });
+          MazeService.getSavedMazes().then(function (r) { $scope.savedMazes = r.data; });
         })
-        .catch(function() { alert('Failed to save maze'); });
+        .catch(function () { alert('Failed to save maze'); });
     };
 
-    $scope.loadMaze = function(id) {
+    $scope.loadMaze = function (id) {
       MazeService.loadMaze(id)
-        .then(function(response) {
+        .then(function (response) {
           $scope.maze = response.data;
           $scope.currentMazeId = id;
           $scope.solution = null;
@@ -219,10 +219,10 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
           $scope.render();
           setStatus('LOADED');
         })
-        .catch(function() { alert('Failed to load maze'); });
+        .catch(function () { alert('Failed to load maze'); });
     };
 
-    $scope.submitScore = function() {
+    $scope.submitScore = function () {
       if (!$scope.form.playerName.trim()) { alert('Enter player name'); return; }
       MazeService.submitScore({
         playerName: $scope.form.playerName.trim(),
@@ -231,15 +231,15 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
         algoName: $scope.selectedAlgo,
         pathLength: currentPathLength,
         mazeId: $scope.currentMazeId
-      }).then(function() {
+      }).then(function () {
         $scope.scoreSubmitted = true;
         $scope.form.playerName = '';
         $scope.closeModal();
-        MazeService.getTopScores(5).then(function(r) { $scope.topAlgoRuns = r.data; });
+        MazeService.getTopScores(5).then(function (r) { $scope.topAlgoRuns = r.data; });
       });
     };
 
-    $scope.submitAttempt = function() {
+    $scope.submitAttempt = function () {
       if (!$scope.form.attemptName.trim()) { alert('Enter player name'); return; }
       MazeService.submitAttempt({
         playerName: $scope.form.attemptName.trim(),
@@ -247,14 +247,14 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
         duration: Math.round($scope.playTimerMs),
         steps: $scope.playSteps,
         mazeId: $scope.currentMazeId
-      }).then(function() {
+      }).then(function () {
         $scope.form.attemptName = '';
         $scope.closeModal();
-        MazeService.getTopAttempts(5).then(function(r) { $scope.topManualRuns = r.data; });
+        MazeService.getTopAttempts(5).then(function (r) { $scope.topManualRuns = r.data; });
       });
     };
 
-    $scope.startManualPlay = function() {
+    $scope.startManualPlay = function () {
       if (!$scope.maze) return;
       stopTimer();
       $scope.playerPos = { row: 0, col: 0 };
@@ -266,7 +266,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       updateTimerDisplay();
 
       var t0 = performance.now();
-      timerPromise = $interval(function() {
+      timerPromise = $interval(function () {
         $scope.playTimerMs = performance.now() - t0;
         updateTimerDisplay();
       }, 50);
@@ -275,16 +275,16 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       $scope.render();
     };
 
-    $scope.giveUp = function() { stopTimer(); $scope.openModal('giveUp'); };
-    $scope.tryAgain = function() { $scope.closeModal(); $scope.startManualPlay(); };
-    $scope.tryAlgorithm = function() { $scope.closeModal(); $scope.switchMode('algorithm'); };
-    $scope.newMaze = function() { $scope.closeModal(); $scope.generateMaze('manual'); };
+    $scope.giveUp = function () { stopTimer(); $scope.openModal('giveUp'); };
+    $scope.tryAgain = function () { $scope.closeModal(); $scope.startManualPlay(); };
+    $scope.tryAlgorithm = function () { $scope.closeModal(); $scope.switchMode('algorithm'); };
+    $scope.newMaze = function () { $scope.closeModal(); $scope.generateMaze('manual'); };
 
     function handleWin() {
       stopTimer();
       $scope.playerWon = true;
       setStatus('CLEARED!');
-      $timeout(function() { $scope.openModal('attempt'); }, 600);
+      $timeout(function () { $scope.openModal('attempt'); }, 600);
     }
 
     function stopTimer() {
@@ -292,7 +292,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       $scope.playActive = false;
     }
 
-    $scope.formatTime = function(ms) {
+    $scope.formatTime = function (ms) {
       ms = ms || 0;
       var totalSec = Math.floor(ms / 1000);
       var mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
@@ -333,7 +333,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       canvas.height = $scope.maze.rows * cellSize;
     }
 
-    $scope.render = function() {
+    $scope.render = function () {
       if (!$scope.maze || !ctx) return;
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -349,7 +349,7 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
     function renderWalls() {
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
-      $scope.maze.cells.forEach(function(cd) {
+      $scope.maze.cells.forEach(function (cd) {
         var x = cd.col * cellSize, y = cd.row * cellSize;
         ctx.beginPath();
         if (cd.top) { ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); }
@@ -361,16 +361,26 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
     }
 
     function renderTrail() {
-      $scope.visitedCells.forEach(function(key) {
+      if (!$scope.visitedCells || !$scope.visitedCells.length) return;
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      $scope.visitedCells.forEach(function (key, i) {
         var parts = key.split(',');
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(parseInt(parts[1]) * cellSize + 1, parseInt(parts[0]) * cellSize + 1, cellSize - 2, cellSize - 2);
+        var r = parseInt(parts[0]);
+        var c = parseInt(parts[1]);
+        var x = c * cellSize + cellSize / 2;
+        var y = r * cellSize + cellSize / 2;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
+      ctx.stroke();
     }
 
     function renderSolution(upToIndex) {
       if (!$scope.solution || !$scope.solution.length) return;
-      ctx.strokeStyle = '#cccccc';
+      ctx.strokeStyle = '#6366f1';
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -420,10 +430,10 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
       step();
     }
 
-    $scope.movePlayer = function(dir) {
+    $scope.movePlayer = function (dir) {
       if (!$scope.playActive || $scope.playerWon || !$scope.maze) return;
 
-      var cell = $scope.maze.cells.find(function(c) {
+      var cell = $scope.maze.cells.find(function (c) {
         return c.row === $scope.playerPos.row && c.col === $scope.playerPos.col;
       });
       if (!cell || cell[dir]) return;
@@ -446,19 +456,19 @@ app.controller('MazeController', ['$scope', '$interval', '$timeout', 'MazeServic
 
   }]);
 
-app.directive('mzKeyHandler', function() {
+app.directive('mzKeyHandler', function () {
   return {
     restrict: 'A',
-    link: function(scope) {
+    link: function (scope) {
       var keyMap = {
         ArrowUp: 'top', ArrowDown: 'bottom',
         ArrowLeft: 'left', ArrowRight: 'right'
       };
-      document.addEventListener('keydown', function(e) {
+      document.addEventListener('keydown', function (e) {
         var dir = keyMap[e.key];
         if (!dir || scope.mode !== 'manual') return;
         e.preventDefault();
-        scope.$apply(function() { scope.movePlayer(dir); });
+        scope.$apply(function () { scope.movePlayer(dir); });
       });
     }
   };

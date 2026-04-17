@@ -9,7 +9,7 @@
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
-    
+
     /* Neutrals */
     --bg-main: #f8fafc;
     --bg-card: #ffffff;
@@ -19,26 +19,26 @@
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    
+
     /* Spacing */
     --space-xs: 0.5rem;
     --space-sm: 0.75rem;
     --space-md: 1rem;
     --space-lg: 1.5rem;
     --space-xl: 2rem;
-    
+
     /* Border Radius */
     --radius-sm: 0.375rem;
     --radius-md: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
-    
+
     /* Transitions */
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -51,7 +51,7 @@
 
 body {
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    background: linear-gradient(0deg, #eef2ff 0%, #6366f1 100%);
     color: var(--text-primary);
     padding: var(--space-lg);
     min-height: 100vh;
@@ -64,12 +64,12 @@ body {
 
 /* Header Styles */
 .header {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.67);
     border-radius: var(--radius-lg);
     padding: var(--space-xl);
     margin-bottom: var(--space-lg);
     box-shadow: var(--shadow-md);
-    border: 1px solid var(--border);
+    border: 5px solid #000000;
     backdrop-filter: blur(10px);
 }
 
@@ -146,11 +146,11 @@ body {
 /* Control Panel */
 .control-panel {
     width: 340px;
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.67);
     border-radius: var(--radius-lg);
     padding: var(--space-xl);
     box-shadow: var(--shadow-md);
-    border: 1px solid var(--border);
+    border: 5px solid #000000;
     max-height: calc(100vh - 200px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -389,11 +389,11 @@ select:hover {
 /* Canvas Container */
 .canvas-container {
     flex-grow: 1;
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.67);
     border-radius: var(--radius-lg);
     padding: var(--space-xl);
     box-shadow: var(--shadow-md);
-    border: 1px solid var(--border);
+    border: 5px solid #000000;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -557,8 +557,13 @@ table.score-table tbody tr:hover {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal.active {
@@ -583,6 +588,7 @@ table.score-table tbody tr:hover {
         transform: translateY(20px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -727,7 +733,7 @@ table.score-table tbody tr:hover {
     .main-container {
         flex-direction: column;
     }
-    
+
     .control-panel {
         width: 100%;
         max-height: none;
