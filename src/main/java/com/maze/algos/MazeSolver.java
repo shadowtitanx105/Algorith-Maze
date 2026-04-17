@@ -114,4 +114,137 @@ public class MazeSolver {
 
         return new ArrayList<>();
     }
+
+    public List<Cell> solveBFS(Maze maze, Cell start, Cell end) {
+        Queue<Node> queue = new LinkedList<>();
+        Set<Cell> closedSet = new HashSet<>();
+        Node startNode = new Node(start, null, 0, 0);
+        queue.add(startNode);
+        closedSet.add(start);
+
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+            if (current.cell == end) return reconstructPath(current);
+
+            for (Cell neighbor : maze.getAccessibleNeighbors(current.cell)) {
+                if (!closedSet.contains(neighbor)) {
+                    closedSet.add(neighbor);
+                    queue.add(new Node(neighbor, current, current.gCost + 1, 0));
+                }
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    public List<Cell> solveDFS(Maze maze, Cell start, Cell end) {
+        Stack<Node> stack = new Stack<>();
+        Set<Cell> closedSet = new HashSet<>();
+        Node startNode = new Node(start, null, 0, 0);
+        stack.push(startNode);
+
+        while (!stack.isEmpty()) {
+            Node current = stack.pop();
+            if (current.cell == end) return reconstructPath(current);
+
+            if (!closedSet.contains(current.cell)) {
+                closedSet.add(current.cell);
+                for (Cell neighbor : maze.getAccessibleNeighbors(current.cell)) {
+                    if (!closedSet.contains(neighbor)) {
+                        stack.push(new Node(neighbor, current, current.gCost + 1, 0));
+                    }
+                }
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    public List<Cell> solveGreedy(Maze maze, Cell start, Cell end) {
+        // PriorityQueue compares fCost(). Since gCost is 0, it sorts only by hCost.
+        PriorityQueue<Node> openSet = new PriorityQueue<>();
+        Set<Cell> closedSet = new HashSet<>();
+
+        Node startNode = new Node(start, null, 0, heuristic(start, end));
+        openSet.add(startNode);
+
+        while (!openSet.isEmpty()) {
+            Node current = openSet.poll();
+
+            if (current.cell == end) return reconstructPath(current);
+
+            if (closedSet.contains(current.cell)) continue;
+            closedSet.add(current.cell);
+
+            for (Cell neighbor : maze.getAccessibleNeighbors(current.cell)) {
+                if (!closedSet.contains(neighbor)) {
+                    double h = heuristic(neighbor, end);
+                    // Note: gCost is passed as 0 so fCost() == hCost
+                    openSet.add(new Node(neighbor, current, 0, h));
+                }
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    public List<Cell> solveBidirectional(Maze maze, Cell start, Cell end) {
+        Queue<Node> queueA = new LinkedList<>();
+        Queue<Node> queueB = new LinkedList<>();
+        Map<Cell, Node> visitedA = new HashMap<>();
+        Map<Cell, Node> visitedB = new HashMap<>();
+
+        Node startNode = new Node(start, null, 0, 0);
+        Node endNode = new Node(end, null, 0, 0);
+
+        queueA.add(startNode);
+        queueB.add(endNode);
+        visitedA.put(start, startNode);
+        visitedB.put(end, endNode);
+
+        while (!queueA.isEmpty() && !queueB.isEmpty()) {
+            // Expand from Start
+            Node currA = queueA.poll();
+            for (Cell neighbor : maze.getAccessibleNeighbors(currA.cell)) {
+                if (!visitedA.containsKey(neighbor)) {
+                    Node nNodeA = new Node(neighbor, currA, currA.gCost + 1, 0);
+                    visitedA.put(neighbor, nNodeA);
+                    queueA.add(nNodeA);
+
+                    if (visitedB.containsKey(neighbor))
+                        return buildBidirectionalPath(nNodeA, visitedB.get(neighbor));
+                }
+            }
+
+            // Expand from End
+            Node currB = queueB.poll();
+            for (Cell neighbor : maze.getAccessibleNeighbors(currB.cell)) {
+                if (!visitedB.containsKey(neighbor)) {
+                    Node nNodeB = new Node(neighbor, currB, currB.gCost + 1, 0);
+                    visitedB.put(neighbor, nNodeB);
+                    queueB.add(nNodeB);
+
+                    if (visitedA.containsKey(neighbor))
+                        return buildBidirectionalPath(visitedA.get(neighbor), nNodeB);
+                }
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    private List<Cell> buildBidirectionalPath(Node nodeA, Node nodeB) {
+        List<Cell> path = new ArrayList<>();
+
+        // Path from start to meeting point
+        Node current = nodeA;
+        while (current != null) {
+            path.add(0, current.cell);
+            current = current.parent;
+        }
+
+        // Path from meeting point to end (skipping duplicate meeting point)
+        current = nodeB.parent;
+        while (current != null) {
+            path.add(current.cell);
+            current = current.parent;
+        }
+        return path;
+    }
 }

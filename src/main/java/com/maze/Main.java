@@ -51,9 +51,30 @@ public class Main {
 
             MazeSolver solver = new MazeSolver();
             long startTime = System.currentTimeMillis();
-            List<Cell> solution = "dijkstra".equalsIgnoreCase(algoName)
-                    ? solver.solveDijkstra(maze, start, end)
-                    : solver.solve(maze, start, end);
+
+            List<Cell> solution;
+            switch (algoName.toLowerCase()) {
+                case "dijkstra":
+                    solution = solver.solveDijkstra(maze, start, end);
+                    break;
+                case "bfs":
+                    solution = solver.solveBFS(maze, start, end);
+                    break;
+                case "dfs":
+                    solution = solver.solveDFS(maze, start, end);
+                    break;
+                case "greedy":
+                    solution = solver.solveGreedy(maze, start, end);
+                    break;
+                case "bidirectional":
+                    solution = solver.solveBidirectional(maze, start, end);
+                    break;
+                case "astar":
+                default:
+                    solution = solver.solve(maze, start, end);
+                    break;
+            }
+
             long solveTime = System.currentTimeMillis() - startTime;
 
             for (Cell c : solution)
