@@ -184,30 +184,6 @@ LEFT JOIN manual  man ON p.player_id = man.player_id
 GROUP BY p.player_id
 ORDER BY best_algo_ms ASC NULLS LAST;
 
-
--- ── Q6: Improvement Rate — does a player get faster across repeat runs? ───────
-SELECT '=== Q6: Player Improvement — First vs Latest Algo Run per Maze Size ===' AS "";
-
-SELECT
-    p.name,
-    ar.maze_size,
-    ar.algo_name,
-    FIRST_VALUE(ar.solve_time) OVER w   AS first_run_ms,
-    LAST_VALUE(ar.solve_time)  OVER w   AS last_run_ms,
-    FIRST_VALUE(ar.solve_time) OVER w
-        - LAST_VALUE(ar.solve_time) OVER w AS improvement_ms
-FROM algo_run ar
-JOIN player p ON ar.player_id = p.player_id
-WINDOW w AS (
-    PARTITION BY ar.player_id, ar.maze_size, ar.algo_name
-    ORDER BY ar.created_at
-    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-)
-GROUP BY ar.player_id, ar.maze_size, ar.algo_name
-HAVING COUNT(*) > 1
-ORDER BY improvement_ms DESC;
-
-
 -- ── Q7: A* vs Dijkstra efficiency gap on same maze ───────────────────────────
 SELECT '=== Q7: A* vs Dijkstra — Average Speed Ratio per Maze Size ===' AS "";
 
@@ -272,6 +248,8 @@ SELECT 'persobest',       COUNT(*) FROM persobest;
 -- Foreign key integrity check (SQLite built-in)
 SELECT '=== FK Integrity Check (empty = all good) ===' AS "";
 PRAGMA foreign_key_check;
+
+SELECT * FROM saves;
 
 -- Index usage check
 SELECT '=== Index List ===' AS "";
