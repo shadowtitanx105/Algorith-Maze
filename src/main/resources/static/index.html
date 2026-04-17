@@ -43,6 +43,10 @@
                         <label for="cols">COLUMNS</label>
                         <input type="number" id="cols" value="20" min="5" max="50">
                     </div>
+                    <div class="control-group braid-control">
+                        <label for="braidIntensityAlgo">BRAID INTENSITY — <span id="braidValueAlgo">0%</span></label>
+                        <input type="range" id="braidIntensityAlgo" min="0" max="100" value="0" step="5">
+                    </div>
                     <button id="generateBtn"  class="btn btn-primary">GENERATE</button>
                     <button id="saveMazeBtn"  class="btn btn-save" disabled style="margin-top:0.75rem">SAVE MAZE</button>
                 </section>
@@ -122,6 +126,10 @@
                         <label for="manualCols">COLUMNS</label>
                         <input type="number" id="manualCols" value="20" min="5" max="50">
                     </div>
+                    <div class="control-group braid-control">
+                        <label for="braidIntensityManual">BRAID INTENSITY — <span id="braidValueManual">0%</span></label>
+                        <input type="range" id="braidIntensityManual" min="0" max="100" value="0" step="5">
+                    </div>
                     <button id="manualGenerateBtn"  class="btn btn-primary">GENERATE</button>
                     <button id="saveMazeBtnManual"  class="btn btn-save" disabled style="margin-top:0.75rem">SAVE MAZE</button>
                 </section>
@@ -188,6 +196,10 @@
                 <div class="legend-item">
                     <div class="legend-color end"></div>
                     <span>END NODE</span>
+                </div>
+                <div class="legend-item" id="exploredLegendItem" style="display:none">
+                    <div class="legend-color explored"></div>
+                    <span>EXPLORED</span>
                 </div>
                 <div class="legend-item" id="playerLegendItem" style="display:none">
                     <div class="legend-color player"></div>

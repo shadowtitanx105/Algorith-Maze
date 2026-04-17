@@ -31,9 +31,15 @@ public class Main {
             Map<String, Object> req = mapper.readValue(ctx.body(), Map.class);
             int rows = (Integer) req.get("rows");
             int cols = (Integer) req.get("cols");
+            int braidPercent = req.containsKey("braidPercent")
+                    ? ((Number) req.get("braidPercent")).intValue() : 0;
 
+            MazeGenerator generator = new MazeGenerator();
             Maze maze = new Maze(rows, cols);
-            new MazeGenerator().generate(maze);
+            generator.generate(maze);
+            if (braidPercent > 0) {
+                generator.makeBraid(maze, braidPercent);
+            }
             ctx.json(serializeMaze(maze));
         });
 
@@ -44,6 +50,7 @@ public class Main {
             @SuppressWarnings("unchecked")
             Map<String, Object> mazeData = (Map<String, Object>) req.get("maze");
             String algoName = (String) req.getOrDefault("algoName", "astar");
+            boolean animate = req.containsKey("animate") && Boolean.TRUE.equals(req.get("animate"));
 
             Maze maze = deserializeMaze(mazeData);
             Cell start = maze.getCell(0, 0);
@@ -53,26 +60,43 @@ public class Main {
             long startTime = System.currentTimeMillis();
 
             List<Cell> solution;
-            switch (algoName.toLowerCase()) {
-                case "dijkstra":
-                    solution = solver.solveDijkstra(maze, start, end);
-                    break;
-                case "bfs":
-                    solution = solver.solveBFS(maze, start, end);
-                    break;
-                case "dfs":
-                    solution = solver.solveDFS(maze, start, end);
-                    break;
-                case "greedy":
-                    solution = solver.solveGreedy(maze, start, end);
-                    break;
-                case "bidirectional":
-                    solution = solver.solveBidirectional(maze, start, end);
-                    break;
-                case "astar":
-                default:
-                    solution = solver.solve(maze, start, end);
-                    break;
+            List<Cell> visited = new ArrayList<>();
+
+            if (animate) {
+                MazeSolver.SolveResult result;
+                switch (algoName.toLowerCase()) {
+                    case "dijkstra":
+                        result = solver.solveDijkstraWithVisited(maze, start, end); break;
+                    case "bfs":
+                        result = solver.solveBFSWithVisited(maze, start, end); break;
+                    case "dfs":
+                        result = solver.solveDFSWithVisited(maze, start, end); break;
+                    case "greedy":
+                        result = solver.solveGreedyWithVisited(maze, start, end); break;
+                    case "bidirectional":
+                        result = solver.solveBidirectionalWithVisited(maze, start, end); break;
+                    case "astar":
+                    default:
+                        result = solver.solveWithVisited(maze, start, end); break;
+                }
+                solution = result.solution;
+                visited = result.visited;
+            } else {
+                switch (algoName.toLowerCase()) {
+                    case "dijkstra":
+                        solution = solver.solveDijkstra(maze, start, end); break;
+                    case "bfs":
+                        solution = solver.solveBFS(maze, start, end); break;
+                    case "dfs":
+                        solution = solver.solveDFS(maze, start, end); break;
+                    case "greedy":
+                        solution = solver.solveGreedy(maze, start, end); break;
+                    case "bidirectional":
+                        solution = solver.solveBidirectional(maze, start, end); break;
+                    case "astar":
+                    default:
+                        solution = solver.solve(maze, start, end); break;
+                }
             }
 
             long solveTime = System.currentTimeMillis() - startTime;
@@ -84,6 +108,9 @@ public class Main {
             response.put("solution", serializePath(solution));
             response.put("solveTime", solveTime);
             response.put("pathLength", solution.size());
+            if (animate) {
+                response.put("visited", serializePath(visited));
+            }
             ctx.json(response);
         });
 
@@ -144,10 +171,7 @@ public class Main {
             int cols = ((Number) mazeData.get("cols")).intValue();
             String gridJson = mapper.writeValueAsString(mazeData);
 
-            // 1. Insert MAZE (strong entity, independent of player)
             int mazeId = database.insertMaze(rows, cols, gridJson);
-
-            // 2. Insert SAVES (associative entity linking this player to this maze)
             int playerId = database.getOrCreatePlayer(playerName);
             database.addSave(playerId, mazeId, label);
 

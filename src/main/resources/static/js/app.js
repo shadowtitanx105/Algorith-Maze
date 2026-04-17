@@ -12,11 +12,16 @@ class MazeMaster {
     this.solveTimeMs = 0;
     this.currentPathLength = 0;
 
+    // ── Exploration animation state ───────────────────────────────────────
+    this.visitedOrder = [];
+    this.showExplored = false;
+    this.exploredCount = 0;
+
     // ── Mode ─────────────────────────────────────────────────────────────
     this.mode = 'algorithm';
 
     // ── Saved maze reference ──────────────────────────────────────────────
-    this.currentMazeId = null;   // non-null when maze is saved or loaded
+    this.currentMazeId = null;
 
     // ── Manual play state ─────────────────────────────────────────────────
     this.playerPos = { row: 0, col: 0 };
@@ -63,6 +68,12 @@ class MazeMaster {
       solveTime: document.getElementById('solveTime'),
       scoresContainer: document.getElementById('scoresContainer'),
 
+      // Braid sliders
+      braidIntensityAlgo: document.getElementById('braidIntensityAlgo'),
+      braidValueAlgo: document.getElementById('braidValueAlgo'),
+      braidIntensityManual: document.getElementById('braidIntensityManual'),
+      braidValueManual: document.getElementById('braidValueManual'),
+
       // Manual controls
       manualGenerateBtn: document.getElementById('manualGenerateBtn'),
       saveMazeBtnManual: document.getElementById('saveMazeBtnManual'),
@@ -74,6 +85,7 @@ class MazeMaster {
       playStepsEl: document.getElementById('playSteps'),
       attemptsContainer: document.getElementById('attemptsContainer'),
       playerLegendItem: document.getElementById('playerLegendItem'),
+      exploredLegendItem: document.getElementById('exploredLegendItem'),
 
       // Saved mazes containers
       savedMazesContainerAlgo: document.getElementById('savedMazesContainerAlgo'),
@@ -123,6 +135,14 @@ class MazeMaster {
     this.el.showSolutionCheck.addEventListener('change', () => this.render());
     this.el.animatePathCheck.addEventListener('change', () => { if (this.solution) this.render(); });
 
+    // Braid sliders
+    this.el.braidIntensityAlgo.addEventListener('input', () => {
+      this.el.braidValueAlgo.textContent = this.el.braidIntensityAlgo.value + '%';
+    });
+    this.el.braidIntensityManual.addEventListener('input', () => {
+      this.el.braidValueManual.textContent = this.el.braidIntensityManual.value + '%';
+    });
+
     // Manual panel
     this.el.manualGenerateBtn.addEventListener('click', () => this.generateMaze('manual'));
     this.el.saveMazeBtnManual.addEventListener('click', () => this.showSaveMazeModal());
@@ -168,6 +188,7 @@ class MazeMaster {
       this.el.algorithmPanel.classList.add('hidden');
       this.el.playerLegendItem.style.display = '';
       this.solution = null;
+      this.clearExplorationState();
       if (this.maze) {
         this.el.startPlayBtn.disabled = false;
         this.render();
@@ -186,12 +207,16 @@ class MazeMaster {
     const cols = caller === 'manual'
       ? parseInt(this.el.manualColsInput.value)
       : parseInt(this.el.colsInput.value);
+    const braidPercent = caller === 'manual'
+      ? parseInt(this.el.braidIntensityManual.value)
+      : parseInt(this.el.braidIntensityAlgo.value);
 
     this.stopTimer();
     this.playActive = false;
     this.playerWon = false;
     this.currentMazeId = null;
     this.setSaveButtonState('unsaved');
+    this.clearExplorationState();
 
     this.setStatus('GENERATING...');
     const btn = caller === 'manual' ? this.el.manualGenerateBtn : this.el.generateBtn;
@@ -201,7 +226,7 @@ class MazeMaster {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows, cols })
+        body: JSON.stringify({ rows, cols, braidPercent })
       });
       this.maze = await res.json();
       this.solution = null;
@@ -236,14 +261,21 @@ class MazeMaster {
   async solveMaze() {
     if (!this.maze) return;
     const algorithm = this.el.algorithmSelect.value;
+    const animate = this.el.animatePathCheck.checked;
+    const showSolution = this.el.showSolutionCheck.checked;
+
     this.setStatus('SOLVING...', 'active');
     this.el.solveBtn.disabled = true;
+    this.clearExplorationState();
 
     try {
+      const body = { maze: this.maze, algoName: algorithm };
+      if (animate && !showSolution) body.animate = true;
+
       const res = await fetch('/api/solve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maze: this.maze, algoName: algorithm })
+        body: JSON.stringify(body)
       });
       const result = await res.json();
 
@@ -255,8 +287,16 @@ class MazeMaster {
       this.el.solveTime.textContent = `${result.solveTime}ms`;
       this.el.submitScoreBtn.disabled = false;
 
-      if (this.el.animatePathCheck.checked) this.animateSolution();
-      else this.render();
+      if (animate && !showSolution) {
+        // Full exploration animation: visited cells → then solution path
+        this.visitedOrder = result.visited || [];
+        this.animateExploration();
+      } else if (animate && showSolution) {
+        // Animate only the solution path (existing behaviour)
+        this.animateSolution();
+      } else {
+        this.render();
+      }
 
       this.setStatus('SOLVED');
     } catch (err) {
@@ -383,11 +423,7 @@ class MazeMaster {
   }
 
   setSaveButtonState(state) {
-    const text = state === 'saved' ? 'SAVED ✓' : 'SAVE MAZE';
-    const disabled = state !== 'ready';
     [this.el.saveMazeBtn, this.el.saveMazeBtnManual].forEach(btn => {
-      btn.textContent = text;
-      // re-enable both save buttons only when maze exists and not yet saved
       if (state === 'ready') { btn.disabled = false; btn.textContent = 'SAVE MAZE'; }
       if (state === 'saved') { btn.disabled = true; btn.textContent = 'SAVED ✓'; }
       if (state === 'unsaved') { btn.disabled = true; btn.textContent = 'SAVE MAZE'; }
@@ -441,6 +477,7 @@ class MazeMaster {
       this.maze = await res.json();
       this.currentMazeId = id;
       this.solution = null;
+      this.clearExplorationState();
 
       this.stopTimer();
       this.resetPlayDisplay();
@@ -449,7 +486,7 @@ class MazeMaster {
       this.el.solveBtn.disabled = false;
       this.el.startPlayBtn.disabled = false;
       this.el.submitScoreBtn.disabled = true;
-      this.setSaveButtonState('saved'); // already in DB
+      this.setSaveButtonState('saved');
 
       this.el.mazeSize.textContent = `${this.maze.rows} × ${this.maze.cols}`;
       this.el.pathLength.textContent = '-';
@@ -639,8 +676,16 @@ class MazeMaster {
 
     if (this.mode === 'manual') this.renderVisitedTrail();
     this.renderWalls();
-    if (this.solution && this.mode === 'algorithm' && this.el.showSolutionCheck.checked)
-      this.renderSolution();
+
+    // Exploration overlay (shown during/after exploration animation)
+    if (this.showExplored && this.visitedOrder.length) {
+      this.renderExplored(this.exploredCount);
+    }
+
+    if (this.solution && this.mode === 'algorithm' && this.el.showSolutionCheck.checked) {
+      this.renderSolution(this.isAnimating ? this.animationFrame : this.solution.length);
+    }
+
     this.renderMarkers();
     if (this.mode === 'manual') this.renderPlayer();
   }
@@ -670,17 +715,46 @@ class MazeMaster {
     }
   }
 
-  renderSolution() {
+  renderExplored(count) {
+    const maxCount = Math.min(count, this.visitedOrder.length);
+    for (let i = 0; i < maxCount; i++) {
+      const { row, col } = this.visitedOrder[i];
+      // Gradient: earlier cells slightly dimmer; latest cells brighter
+      const alpha = 0.13 + (i / this.visitedOrder.length) * 0.12;
+      this.ctx.fillStyle = `rgba(0, 190, 255, ${alpha.toFixed(2)})`;
+      this.ctx.fillRect(
+        col * this.cellSize + 1,
+        row * this.cellSize + 1,
+        this.cellSize - 2,
+        this.cellSize - 2
+      );
+    }
+    // Bright frontier highlight on the last few revealed cells
+    const frontier = Math.min(3, maxCount);
+    for (let i = maxCount - frontier; i < maxCount; i++) {
+      if (i < 0) continue;
+      const { row, col } = this.visitedOrder[i];
+      this.ctx.fillStyle = 'rgba(0, 217, 255, 0.35)';
+      this.ctx.fillRect(
+        col * this.cellSize + 1,
+        row * this.cellSize + 1,
+        this.cellSize - 2,
+        this.cellSize - 2
+      );
+    }
+  }
+
+  renderSolution(len) {
     if (!this.solution || !this.solution.length) return;
+    const drawLen = Math.min(len, this.solution.length);
     this.ctx.strokeStyle = '#ff3366';
     this.ctx.lineWidth = 3;
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
     this.ctx.shadowColor = 'rgba(255, 51, 102, 0.6)';
     this.ctx.shadowBlur = 8;
-    const len = this.isAnimating ? this.animationFrame : this.solution.length;
     this.ctx.beginPath();
-    for (let i = 0; i < len && i < this.solution.length; i++) {
+    for (let i = 0; i < drawLen; i++) {
       const { col, row } = this.solution[i];
       const x = col * this.cellSize + this.cellSize / 2;
       const y = row * this.cellSize + this.cellSize / 2;
@@ -724,6 +798,11 @@ class MazeMaster {
     this.ctx.shadowBlur = 0;
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // ANIMATION
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Existing: animate solution path only (used when both checkboxes are ticked)
   animateSolution() {
     this.isAnimating = true;
     this.animationFrame = 0;
@@ -734,6 +813,54 @@ class MazeMaster {
       else this.isAnimating = false;
     };
     animate();
+  }
+
+  // New: two-phase exploration animation (used when only Animate is ticked)
+  animateExploration() {
+    this.isAnimating = true;
+    this.showExplored = true;
+    this.exploredCount = 0;
+    this.animationFrame = 0;
+    this.el.exploredLegendItem.style.display = '';
+
+    const EXPLORE_SPEED = 4; // cells revealed per frame
+    const totalVisited = this.visitedOrder.length;
+
+    const phase1 = () => {
+      this.exploredCount = Math.min(this.exploredCount + EXPLORE_SPEED, totalVisited);
+      this.render();
+      if (this.exploredCount < totalVisited) {
+        requestAnimationFrame(phase1);
+      } else {
+        // All visited cells shown — brief pause then draw solution
+        setTimeout(() => requestAnimationFrame(phase2), 400);
+      }
+    };
+
+    const phase2 = () => {
+      this.render();
+      // Draw solution path on top of explored cells
+      this.renderSolution(this.animationFrame);
+      this.animationFrame++;
+      if (this.animationFrame <= this.solution.length) {
+        requestAnimationFrame(phase2);
+      } else {
+        this.isAnimating = false;
+      }
+    };
+
+    requestAnimationFrame(phase1);
+  }
+
+  // ── Exploration state helpers ─────────────────────────────────────────────
+
+  clearExplorationState() {
+    this.visitedOrder = [];
+    this.showExplored = false;
+    this.exploredCount = 0;
+    this.isAnimating = false;
+    this.animationFrame = 0;
+    if (this.el.exploredLegendItem) this.el.exploredLegendItem.style.display = 'none';
   }
 
   // ══════════════════════════════════════════════════════════════════════════
