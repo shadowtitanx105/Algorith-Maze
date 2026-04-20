@@ -27,7 +27,7 @@ Thumbs.db
 .local/
 
 # --- Database ---
-*.db
+
 *.sqlite
 
 # Compiled class files
