@@ -58,7 +58,7 @@ hs_err_pid*
 .mvn/wrapper/maven-wrapper.jar
 
 # SQLite database (contains test data)
-*.db
+
 *.db-journal
 
 # OS
